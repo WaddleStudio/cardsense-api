@@ -22,6 +22,8 @@ public class Promotion {
     @JsonAlias("promo_version_id")
     private String promoVersionId;
 
+    private String title;
+
     private String cardCode;
 
     private String cardName;

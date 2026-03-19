@@ -4,6 +4,7 @@ import com.cardsense.api.domain.Promotion;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
 
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Repository
+@ConditionalOnProperty(name = "cardsense.repository.mode", havingValue = "mock", matchIfMissing = true)
 public class MockPromotionRepository implements PromotionRepository {
 
     private List<Promotion> promotions = new ArrayList<>();

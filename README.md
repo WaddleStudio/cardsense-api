@@ -22,6 +22,40 @@
 - `GET /v1/banks`
 - `GET /health`
 
+## Promotion Repository 模式
+- 預設使用 mock repository，資料來源為 `src/main/resources/promotions.json`
+- 若要讀取 extractor 匯入後的 SQLite DB，設定：
+
+```properties
+cardsense.repository.mode=sqlite
+cardsense.repository.sqlite.path=/absolute/path/to/cardsense.db
+```
+
+也可用環境變數：
+
+```bash
+CARDSENSE_DB_PATH=/absolute/path/to/cardsense.db
+```
+
+SQLite 模式會讀取 `promotion_current` table，因此建議先在 extractor repo 執行 JSONL 匯入 job。
+
+### 啟動前準備
+1. 在 extractor repo 產生或更新 JSONL
+2. 匯入 SQLite
+
+```bash
+uv run python jobs/import_jsonl_to_db.py --input outputs/esun-v4-full.jsonl --db data/cardsense.db
+```
+
+3. 啟動 API
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dcardsense.repository.mode=sqlite -Dcardsense.repository.sqlite.path=D:/alan_self/cardsense/cardsense-extractor/data/cardsense.db"
+```
+
+### Smoke Test
+- `SqliteApiSmokeTest` 會以 Spring context 真正啟動 API，並驗證 SQLite repository 可被注入且 recommendation 可讀到 DB 資料。
+
 ## Recommendation Request Example
 ```json
 {
