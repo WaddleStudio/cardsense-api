@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface PromotionRepository {
     List<Promotion> findActivePromotions(LocalDate date);
+
+    List<Promotion> findAllPromotions();
 }

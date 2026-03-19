@@ -3,6 +3,9 @@ package com.cardsense.api.service;
 import com.cardsense.api.domain.Promotion;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 @Service
 public class RewardCalculator {
 
@@ -11,16 +14,23 @@ public class RewardCalculator {
             return 0;
         }
 
-        // Simplification: treating points and miles as 1:1 with currency subunits for sorting magnitude,
-        // or just treating everything as specific 'units'.
-        // In a real system, we'd need conversion rates. 
-        // For this MVP, we perform the raw calculation.
+        if (promotion.getCashbackType() == null || promotion.getCashbackValue() == null) {
+            return 0;
+        }
 
-        double rate = promotion.getRewardRate() != null ? promotion.getRewardRate() : 0.0;
-        int rawReward = (int) (transactionAmount * rate);
+        BigDecimal amount = BigDecimal.valueOf(transactionAmount);
+        BigDecimal reward = switch (promotion.getCashbackType().toUpperCase()) {
+            case "PERCENT", "POINTS" -> amount
+                    .multiply(promotion.getCashbackValue())
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN);
+            case "FIXED" -> promotion.getCashbackValue();
+            default -> BigDecimal.ZERO;
+        };
 
-        if (promotion.getRewardCap() != null && promotion.getRewardCap() > 0) {
-            return Math.min(rawReward, promotion.getRewardCap());
+        int rawReward = reward.intValue();
+
+        if (promotion.getMaxCashback() != null && promotion.getMaxCashback() > 0) {
+            return Math.min(rawReward, promotion.getMaxCashback());
         }
 
         return rawReward;

@@ -5,6 +5,7 @@ import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -13,8 +14,9 @@ import java.util.UUID;
 @Slf4j
 public class AuditService {
 
+    @Async
     public void logRecommendation(RecommendationRequest request, RecommendationResponse response, long latencyMs) {
-        String requestId = UUID.randomUUID().toString();
+        String requestId = response.getRequestId() != null ? response.getRequestId() : UUID.randomUUID().toString();
         
         AuditLog auditLog = AuditLog.builder()
                 .requestId(requestId)
@@ -24,8 +26,6 @@ public class AuditService {
                 .latencyMs(latencyMs)
                 .build();
 
-        // In a real system, this would write to a DB or specific audit log system.
-        // For MVP, we log to SLF4J as INFO.
         log.info("AUDIT: {}", auditLog);
     }
 }

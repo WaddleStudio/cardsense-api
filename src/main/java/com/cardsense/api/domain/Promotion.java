@@ -1,11 +1,12 @@
 package com.cardsense.api.domain;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -15,61 +16,56 @@ import java.util.List;
 @Builder
 public class Promotion {
 
-    @JsonProperty("promo_id")
+    @JsonAlias("promo_id")
     private String promoId;
 
-    @JsonProperty("promo_version_id")
+    @JsonAlias("promo_version_id")
     private String promoVersionId;
 
-    @JsonProperty("card_id")
-    private String cardId;
+    private String cardCode;
 
-    private String bank;
+    private String cardName;
 
-    private List<String> categories;
+    private String cardStatus;
+
+    private Integer annualFee;
+
+    private String applyUrl;
+
+    private String bankCode;
+
+    @JsonAlias("bank")
+    private String bankName;
+
+    private String category;
 
     private String channel;
 
-    @JsonProperty("start_date")
-    private LocalDate startDate;
+    @JsonAlias("start_date")
+    private LocalDate validFrom;
 
-    @JsonProperty("end_date")
-    private LocalDate endDate;
+    @JsonAlias("end_date")
+    private LocalDate validUntil;
 
-    @JsonProperty("min_amount")
+    @JsonAlias("min_amount")
     private Integer minAmount;
 
-    @JsonProperty("reward_type")
-    private String rewardType;
+    private String cashbackType;
 
-    @JsonProperty("reward_rate")
-    private Double rewardRate;
+    private BigDecimal cashbackValue;
 
-    @JsonProperty("reward_cap")
-    private Integer rewardCap;
+    private Integer maxCashback;
 
-    @JsonProperty("frequency_limit")
+    @JsonAlias("frequency_limit")
     private String frequencyLimit;
 
-    @JsonProperty("requires_registration")
+    @JsonAlias("requires_registration")
     private boolean requiresRegistration;
 
-    @JsonProperty("excluded_conditions")
+    private List<String> conditions;
+
+    @JsonAlias("excluded_conditions")
     private List<String> excludedConditions;
 
-    @JsonProperty("source_url")
-    private String sourceUrl;
-
-    private String summary;
-
-    @JsonProperty("raw_text_hash")
-    private String rawTextHash;
-
-    @JsonProperty("extractor_version")
-    private String extractorVersion;
-
-    @JsonProperty("extracted_at")
-    private String extractedAt; // Keeping as string for simplicity in matching schema, or could use OffsetDateTime
-
-    private Double confidence;
+    private String status;
 }

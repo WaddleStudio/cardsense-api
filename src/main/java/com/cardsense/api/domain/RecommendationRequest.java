@@ -1,14 +1,16 @@
 package com.cardsense.api.domain;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,20 +20,17 @@ public class RecommendationRequest {
 
     @NotNull(message = "Transaction amount is required")
     @Min(value = 0, message = "Transaction amount must be non-negative")
-    @JsonProperty("transaction_amount")
-    private Integer transactionAmount;
+    @JsonAlias("transaction_amount")
+    private Integer amount;
 
-    @NotNull(message = "Merchant category is required")
-    @JsonProperty("merchant_category")
-    private String merchantCategory;
+    @NotBlank(message = "Category is required")
+    @JsonAlias("merchant_category")
+    private String category;
 
-    @JsonProperty("merchant_name")
-    private String merchantName;
+    private List<String> cardCodes;
 
-    @JsonProperty("channel")
-    private String channel; // "online" or "offline"
+    private String location;
 
-    @NotNull(message = "Transaction date is required")
-    @JsonProperty("transaction_date")
-    private LocalDate transactionDate;
+    @JsonAlias("transaction_date")
+    private LocalDate date;
 }

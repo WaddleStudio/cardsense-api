@@ -3,7 +3,6 @@ package com.cardsense.api.repository;
 import com.cardsense.api.domain.Promotion;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
@@ -41,8 +40,14 @@ public class MockPromotionRepository implements PromotionRepository {
     @Override
     public List<Promotion> findActivePromotions(LocalDate date) {
         return promotions.stream()
-                .filter(p -> (p.getStartDate() == null || !p.getStartDate().isAfter(date)))
-                .filter(p -> (p.getEndDate() == null || !p.getEndDate().isBefore(date)))
+                .filter(p -> (p.getValidFrom() == null || !p.getValidFrom().isAfter(date)))
+                .filter(p -> (p.getValidUntil() == null || !p.getValidUntil().isBefore(date)))
+                .filter(p -> p.getStatus() == null || "ACTIVE".equalsIgnoreCase(p.getStatus()))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Promotion> findAllPromotions() {
+        return List.copyOf(promotions);
     }
 }
