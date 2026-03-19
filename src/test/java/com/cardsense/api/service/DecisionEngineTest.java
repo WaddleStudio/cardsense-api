@@ -1,6 +1,8 @@
 package com.cardsense.api.service;
 
+import com.cardsense.api.domain.BenefitUsage;
 import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
 import com.cardsense.api.repository.PromotionRepository;
@@ -8,8 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,66 +34,23 @@ public class DecisionEngineTest {
     }
 
     @Test
-        public void testRecommendReturnsSortedTopCards() {
-        Promotion promo1 = Promotion.builder()
-                .promoId("promo1")
-                    .promoVersionId("ver1")
-                    .cardCode("CATHAY_DEMO_LIFESTYLE")
-                    .cardName("國泰世華 示例生活卡")
-                    .bankCode("CATHAY")
-                    .bankName("國泰世華")
-                    .category("ONLINE")
-                    .cashbackType("PERCENT")
-                    .cashbackValue(BigDecimal.valueOf(3.0))
-                    .maxCashback(400)
-                    .annualFee(1800)
-                    .cardStatus("ACTIVE")
-                    .validUntil(LocalDate.of(2026, 4, 30))
-                    .conditions(List.of("線上消費適用"))
-                    .status("ACTIVE")
-                .build();
+    public void testRecommendReturnsSortedTopCards() {
+        Promotion promo1 = buildPromotion("promo1", "ver1", "CATHAY_DEMO_LIFESTYLE", "國泰世華 示例生活卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), 400, 1800, LocalDate.of(2026, 4, 30));
+        promo1.setConditions(List.of(condition("TEXT", "ONLINE", "線上消費適用")));
 
-        Promotion promo2 = Promotion.builder()
-                .promoId("promo2")
-                    .promoVersionId("ver2")
-                    .cardCode("CTBC_DEMO_ONLINE")
-                    .cardName("中國信託 示例網購卡")
-                    .bankCode("CTBC")
-                    .bankName("中國信託")
-                    .category("ONLINE")
-                    .cashbackType("PERCENT")
-                    .cashbackValue(BigDecimal.valueOf(3.0))
-                    .maxCashback(400)
-                    .annualFee(1800)
-                    .cardStatus("ACTIVE")
-                    .validUntil(LocalDate.of(2026, 6, 30))
-                    .conditions(List.of("需登錄活動"))
-                    .status("ACTIVE")
-            .build();
+        Promotion promo2 = buildPromotion("promo2", "ver2", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 400, 1800, LocalDate.of(2026, 6, 30));
+        promo2.setRequiresRegistration(true);
+        promo2.setConditions(List.of(condition("TEXT", "REGISTER", "需登錄活動")));
 
-        Promotion promo3 = Promotion.builder()
-                    .promoId("promo3")
-                    .promoVersionId("ver3")
-                    .cardCode("TAISHIN_DEMO_DIGITAL")
-                    .cardName("台新銀行 示例數位卡")
-                    .bankCode("TAISHIN")
-                    .bankName("台新銀行")
-                    .category("ONLINE")
-                    .cashbackType("PERCENT")
-                    .cashbackValue(BigDecimal.valueOf(2.0))
-                    .maxCashback(400)
-                    .annualFee(3000)
-                    .cardStatus("ACTIVE")
-                    .validUntil(LocalDate.of(2026, 12, 31))
-                    .conditions(List.of("需指定帳戶扣繳"))
-                    .status("ACTIVE")
-                .build();
+        Promotion promo3 = buildPromotion("promo3", "ver3", "TAISHIN_DEMO_DIGITAL", "台新銀行 示例數位卡", "TAISHIN", "台新銀行", BigDecimal.valueOf(2.0), 400, 3000, LocalDate.of(2026, 12, 31));
+        promo3.setConditions(List.of(condition("TEXT", "ACCOUNT", "需指定帳戶扣繳")));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo1, promo2, promo3));
 
         RecommendationRequest request = RecommendationRequest.builder()
                 .amount(1000)
                 .category("online")
+                .registeredPromotionIds(List.of("ver2"))
                 .date(LocalDate.now())
                 .build();
 
@@ -102,39 +61,26 @@ public class DecisionEngineTest {
         assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
         assertEquals("promo2", response.getRecommendations().get(1).getPromotionId());
         assertEquals(30, response.getRecommendations().get(0).getEstimatedReturn());
-        assertTrue(response.getRecommendations().get(1).getConditions().contains("需登錄活動"));
+        assertTrue(response.getRecommendations().get(1).getConditions().stream().anyMatch(condition -> "REGISTRATION_REQUIRED".equals(condition.getType())));
         assertEquals(DecisionEngine.DISCLAIMER, response.getDisclaimer());
         assertNotNull(response.getRequestId());
-        }
+    }
 
-        @Test
-        public void testRecommendFiltersByCardCode() {
-        Promotion promo = Promotion.builder()
-                    .promoId("promo1")
-                    .promoVersionId("ver1")
-                    .cardCode("CTBC_DEMO_ONLINE")
-                    .cardName("中國信託 示例網購卡")
-                    .bankCode("CTBC")
-                    .bankName("中國信託")
-                    .category("ONLINE")
-                    .cashbackType("PERCENT")
-                    .cashbackValue(BigDecimal.valueOf(3.0))
-                    .maxCashback(300)
-                    .annualFee(1800)
-                    .cardStatus("ACTIVE")
-                    .validUntil(LocalDate.of(2026, 6, 30))
-                    .conditions(List.of("需登錄活動"))
-                    .status("ACTIVE")
-                    .build();
+    @Test
+    public void testRecommendFiltersByCardCode() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        promo.setRequiresRegistration(true);
+        promo.setConditions(List.of(condition("TEXT", "REGISTER", "需登錄活動")));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
 
         RecommendationRequest request = RecommendationRequest.builder()
-            .amount(1000)
-            .category("ONLINE")
-            .cardCodes(List.of("CATHAY_DEMO_LIFESTYLE"))
-            .date(LocalDate.now())
-            .build();
+                .amount(1000)
+                .category("ONLINE")
+                .cardCodes(List.of("CATHAY_DEMO_LIFESTYLE"))
+                .registeredPromotionIds(List.of("ver1"))
+                .date(LocalDate.now())
+                .build();
 
         RecommendationResponse response = decisionEngine.recommend(request);
 
@@ -142,170 +88,152 @@ public class DecisionEngineTest {
         assertEquals(DecisionEngine.DISCLAIMER, response.getDisclaimer());
     }
 
-        @Test
-        public void testRecommendKeepsOnlyBestPromotionPerCard() {
-        Promotion betterPromo = Promotion.builder()
-            .promoId("promo1")
-            .promoVersionId("ver1")
-            .cardCode("CTBC_DEMO_ONLINE")
-            .cardName("中國信託 示例網購卡")
-            .bankCode("CTBC")
-            .bankName("中國信託")
-            .category("ONLINE")
-            .cashbackType("PERCENT")
-            .cashbackValue(BigDecimal.valueOf(3.0))
-            .maxCashback(300)
-            .annualFee(1800)
-            .cardStatus("ACTIVE")
-            .validUntil(LocalDate.of(2026, 6, 30))
-            .status("ACTIVE")
-            .build();
-
-        Promotion weakerPromoSameCard = Promotion.builder()
-            .promoId("promo2")
-            .promoVersionId("ver2")
-            .cardCode("CTBC_DEMO_ONLINE")
-            .cardName("中國信託 示例網購卡")
-            .bankCode("CTBC")
-            .bankName("中國信託")
-            .category("ONLINE")
-            .cashbackType("PERCENT")
-            .cashbackValue(BigDecimal.valueOf(1.0))
-            .maxCashback(300)
-            .annualFee(1800)
-            .cardStatus("ACTIVE")
-            .validUntil(LocalDate.of(2026, 5, 31))
-            .status("ACTIVE")
-            .build();
+    @Test
+    public void testRecommendKeepsOnlyBestPromotionPerCard() {
+        Promotion betterPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        Promotion weakerPromoSameCard = buildPromotion("promo2", "ver2", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(1.0), 300, 1800, LocalDate.of(2026, 5, 31));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(betterPromo, weakerPromoSameCard));
 
         RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
-            .amount(1000)
-            .category("ONLINE")
-            .date(LocalDate.now())
-            .build());
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
 
         assertEquals(1, response.getRecommendations().size());
         assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
-        }
+    }
 
-        @Test
-        public void testRecommendSkipsInactiveCardsAndZeroReward() {
-        Promotion inactiveCardPromo = Promotion.builder()
-            .promoId("promo1")
-            .promoVersionId("ver1")
-            .cardCode("CTBC_DEMO_ONLINE")
-            .cardName("中國信託 示例網購卡")
-            .bankCode("CTBC")
-            .bankName("中國信託")
-            .category("ONLINE")
-            .cashbackType("PERCENT")
-            .cashbackValue(BigDecimal.valueOf(3.0))
-            .maxCashback(300)
-            .annualFee(1800)
-            .cardStatus("DISCONTINUED")
-            .validUntil(LocalDate.of(2026, 6, 30))
-            .status("ACTIVE")
-            .build();
+    @Test
+    public void testRecommendSkipsInactiveCardsAndZeroReward() {
+        Promotion inactiveCardPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        inactiveCardPromo.setCardStatus("DISCONTINUED");
 
-        Promotion zeroRewardPromo = Promotion.builder()
-            .promoId("promo2")
-            .promoVersionId("ver2")
-            .cardCode("CATHAY_DEMO_LIFESTYLE")
-            .cardName("國泰世華 示例生活卡")
-            .bankCode("CATHAY")
-            .bankName("國泰世華")
-            .category("ONLINE")
-            .cashbackType("PERCENT")
-            .cashbackValue(BigDecimal.ZERO)
-            .maxCashback(300)
-            .annualFee(1800)
-            .cardStatus("ACTIVE")
-            .validUntil(LocalDate.of(2026, 6, 30))
-            .status("ACTIVE")
-            .build();
+        Promotion zeroRewardPromo = buildPromotion("promo2", "ver2", "CATHAY_DEMO_LIFESTYLE", "國泰世華 示例生活卡", "CATHAY", "國泰世華", BigDecimal.ZERO, 300, 1800, LocalDate.of(2026, 6, 30));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(inactiveCardPromo, zeroRewardPromo));
 
         RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
-            .amount(1000)
-            .category("ONLINE")
-            .date(LocalDate.now())
-            .build());
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
 
         assertTrue(response.getRecommendations().isEmpty());
-        }
+    }
 
     @Test
     public void testRecommendAppliesLocationOnlyConditions() {
-    Promotion taipeiPromo = Promotion.builder()
-        .promoId("promo1")
-        .promoVersionId("ver1")
-        .cardCode("CTBC_DEMO_ONLINE")
-        .cardName("中國信託 示例網購卡")
-        .bankCode("CTBC")
-        .bankName("中國信託")
-        .category("ONLINE")
-        .cashbackType("PERCENT")
-        .cashbackValue(BigDecimal.valueOf(4.0))
-        .maxCashback(400)
-        .annualFee(1800)
-        .cardStatus("ACTIVE")
-        .validUntil(LocalDate.of(2026, 6, 30))
-        .conditions(List.of("LOCATION_ONLY:TAIPEI", "台北限定活動"))
-        .status("ACTIVE")
-        .build();
+        Promotion taipeiPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(4.0), 400, 1800, LocalDate.of(2026, 6, 30));
+        taipeiPromo.setConditions(List.of(condition("LOCATION_ONLY", "TAIPEI", "台北限定活動")));
 
-    when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(taipeiPromo));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(taipeiPromo));
 
-    RecommendationResponse mismatch = decisionEngine.recommend(RecommendationRequest.builder()
-        .amount(1000)
-        .category("ONLINE")
-        .location("Kaohsiung")
-        .date(LocalDate.now())
-        .build());
+        RecommendationResponse mismatch = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .location("Kaohsiung")
+                .date(LocalDate.now())
+                .build());
 
-    RecommendationResponse match = decisionEngine.recommend(RecommendationRequest.builder()
-        .amount(1000)
-        .category("ONLINE")
-        .location("Taipei Xinyi")
-        .date(LocalDate.now())
-        .build());
+        RecommendationResponse match = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .location("Taipei Xinyi")
+                .date(LocalDate.now())
+                .build());
 
-    assertTrue(mismatch.getRecommendations().isEmpty());
-    assertEquals(1, match.getRecommendations().size());
+        assertTrue(mismatch.getRecommendations().isEmpty());
+        assertEquals(1, match.getRecommendations().size());
     }
 
     @Test
     public void testRecommendHonorsExcludedConditions() {
-    Promotion excludedPromo = Promotion.builder()
-        .promoId("promo1")
-        .promoVersionId("ver1")
-        .cardCode("CTBC_DEMO_ONLINE")
-        .cardName("中國信託 示例網購卡")
-        .bankCode("CTBC")
-        .bankName("中國信託")
-        .category("ONLINE")
-        .cashbackType("PERCENT")
-        .cashbackValue(BigDecimal.valueOf(4.0))
-        .maxCashback(400)
-        .annualFee(1800)
-        .cardStatus("ACTIVE")
-        .validUntil(LocalDate.of(2026, 6, 30))
-        .excludedConditions(List.of("LOCATION:TAIPEI", "CATEGORY:ONLINE"))
-        .status("ACTIVE")
-        .build();
+        Promotion excludedPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(4.0), 400, 1800, LocalDate.of(2026, 6, 30));
+        excludedPromo.setExcludedConditions(List.of(
+                condition("LOCATION_EXCLUDE", "TAIPEI", "台北排除"),
+                condition("CATEGORY_EXCLUDE", "ONLINE", "排除一般線上消費")
+        ));
 
-    when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(excludedPromo));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(excludedPromo));
 
-    RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
-        .amount(1000)
-        .category("ONLINE")
-        .location("Taipei")
-        .date(LocalDate.now())
-        .build());
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .location("Taipei")
+                .date(LocalDate.now())
+                .build());
 
-    assertTrue(response.getRecommendations().isEmpty());
+        assertTrue(response.getRecommendations().isEmpty());
+    }
+
+    @Test
+    public void testRecommendRequiresRegistrationState() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        promo.setRequiresRegistration(true);
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse missingRegistration = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
+
+        RecommendationResponse registered = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .registeredPromotionIds(List.of("ver1"))
+                .date(LocalDate.now())
+                .build());
+
+        assertTrue(missingRegistration.getRecommendations().isEmpty());
+        assertEquals(1, registered.getRecommendations().size());
+    }
+
+    @Test
+    public void testRecommendSkipsExhaustedBenefits() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        promo.setRequiresRegistration(true);
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse exhausted = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .registeredPromotionIds(List.of("ver1"))
+                .benefitUsage(List.of(BenefitUsage.builder().promoVersionId("ver1").consumedAmount(300).build()))
+                .date(LocalDate.now())
+                .build());
+
+        assertTrue(exhausted.getRecommendations().isEmpty());
+    }
+
+    private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
+        return Promotion.builder()
+                .promoId(promoId)
+                .promoVersionId(promoVersionId)
+                .cardCode(cardCode)
+                .cardName(cardName)
+                .bankCode(bankCode)
+                .bankName(bankName)
+                .category("ONLINE")
+                .cashbackType("PERCENT")
+                .cashbackValue(cashbackValue)
+                .maxCashback(maxCashback)
+                .annualFee(annualFee)
+                .cardStatus("ACTIVE")
+                .validUntil(validUntil)
+                .status("ACTIVE")
+                .build();
+    }
+
+    private PromotionCondition condition(String type, String value, String label) {
+        return PromotionCondition.builder()
+                .type(type)
+                .value(value)
+                .label(label)
+                .build();
     }
 }

@@ -1,7 +1,9 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.CardRecommendation;
+import com.cardsense.api.domain.BenefitUsage;
 import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
 import com.cardsense.api.domain.ScoredPromotion;
@@ -15,6 +17,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -91,6 +94,14 @@ public class DecisionEngine {
             return false;
         }
 
+        if (!matchesRegistrationState(p, r)) {
+            return false;
+        }
+
+        if (hasExhaustedBenefit(p, r)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -129,7 +140,7 @@ public class DecisionEngine {
 
     private CardRecommendation toRecommendation(ScoredPromotion scoredPromotion) {
         Promotion promotion = scoredPromotion.promotion();
-        List<String> recommendationConditions = buildRecommendationConditions(promotion);
+        List<PromotionCondition> recommendationConditions = buildRecommendationConditions(promotion);
         String cashbackValueText = promotion.getCashbackValue() == null
                 ? "0"
                 : promotion.getCashbackValue().stripTrailingZeros().toPlainString();
@@ -159,13 +170,15 @@ public class DecisionEngine {
     }
 
     private boolean matchesLocation(Promotion promotion, String requestLocation) {
-        List<String> conditions = promotion.getConditions();
+        List<PromotionCondition> conditions = promotion.getConditions();
         if (conditions == null || conditions.isEmpty()) {
             return true;
         }
 
         List<String> locationOnlyTokens = conditions.stream()
-                .map(this::extractLocationOnlyToken)
+                .filter(condition -> "LOCATION_ONLY".equalsIgnoreCase(condition.getType()))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
                 .filter(token -> !token.isBlank())
                 .toList();
 
@@ -182,7 +195,7 @@ public class DecisionEngine {
     }
 
     private boolean matchesExcludedConditions(Promotion promotion, RecommendationRequest request) {
-        List<String> excludedConditions = promotion.getExcludedConditions();
+        List<PromotionCondition> excludedConditions = promotion.getExcludedConditions();
         if (excludedConditions == null || excludedConditions.isEmpty()) {
             return false;
         }
@@ -190,15 +203,15 @@ public class DecisionEngine {
         String normalizedCategory = normalizeValue(request.getCategory());
         String normalizedLocation = normalizeValue(request.getLocation());
 
-        for (String excludedCondition : excludedConditions) {
-            String normalizedCondition = normalizeValue(excludedCondition);
-            if (normalizedCondition.startsWith("CATEGORY:")) {
-                if (normalizedCategory.equals(normalizedCondition.substring("CATEGORY:".length()))) {
+        for (PromotionCondition excludedCondition : excludedConditions) {
+            String normalizedType = normalizeValue(excludedCondition.getType());
+            String normalizedValue = normalizeValue(excludedCondition.getValue());
+            if ("CATEGORY_EXCLUDE".equals(normalizedType)) {
+                if (normalizedCategory.equals(normalizedValue)) {
                     return true;
                 }
-            } else if (normalizedCondition.startsWith("LOCATION:")) {
-                String locationToken = normalizedCondition.substring("LOCATION:".length());
-                if (!normalizedLocation.isBlank() && normalizedLocation.contains(locationToken)) {
+            } else if ("LOCATION_EXCLUDE".equals(normalizedType)) {
+                if (!normalizedLocation.isBlank() && normalizedLocation.contains(normalizedValue)) {
                     return true;
                 }
             }
@@ -207,33 +220,83 @@ public class DecisionEngine {
         return false;
     }
 
-    private String extractLocationOnlyToken(String condition) {
-        String normalizedCondition = normalizeValue(condition);
-        if (!normalizedCondition.startsWith("LOCATION_ONLY:")) {
-            return "";
+    private boolean matchesRegistrationState(Promotion promotion, RecommendationRequest request) {
+        if (!promotion.isRequiresRegistration()) {
+            return true;
         }
 
-        return normalizedCondition.substring("LOCATION_ONLY:".length());
+        if (request.getRegisteredPromotionIds() == null || request.getRegisteredPromotionIds().isEmpty()) {
+            return false;
+        }
+
+        String promotionKey = normalizeValue(promotion.getPromoVersionId());
+        return request.getRegisteredPromotionIds().stream()
+                .map(this::normalizeValue)
+                .anyMatch(promotionKey::equals);
     }
 
-    private List<String> buildRecommendationConditions(Promotion promotion) {
-        List<String> conditions = promotion.getConditions() == null
+    private boolean hasExhaustedBenefit(Promotion promotion, RecommendationRequest request) {
+        if (request.getBenefitUsage() == null || request.getBenefitUsage().isEmpty()) {
+            return false;
+        }
+
+        BenefitUsage matchedUsage = request.getBenefitUsage().stream()
+                .filter(usage -> normalizeValue(usage.getPromoVersionId()).equals(normalizeValue(promotion.getPromoVersionId())))
+                .findFirst()
+                .orElse(null);
+
+        if (matchedUsage == null || matchedUsage.getConsumedAmount() == null) {
+            return false;
+        }
+
+        if (promotion.getMaxCashback() != null && matchedUsage.getConsumedAmount() >= promotion.getMaxCashback()) {
+            return true;
+        }
+
+        return promotion.getFrequencyLimit() != null
+                && "ONCE".equalsIgnoreCase(promotion.getFrequencyLimit())
+                && matchedUsage.getConsumedAmount() > 0;
+    }
+
+    private List<PromotionCondition> buildRecommendationConditions(Promotion promotion) {
+        List<PromotionCondition> conditions = promotion.getConditions() == null
                 ? new java.util.ArrayList<>()
                 : new java.util.ArrayList<>(promotion.getConditions());
 
         if (promotion.getMinAmount() != null && promotion.getMinAmount() > 0) {
-            conditions.add("最低消費 " + promotion.getMinAmount() + " 元");
+            conditions.add(PromotionCondition.builder()
+                    .type("MIN_SPEND")
+                    .value(String.valueOf(promotion.getMinAmount()))
+                    .label("最低消費 " + promotion.getMinAmount() + " 元")
+                    .build());
         }
 
         if (promotion.isRequiresRegistration()) {
-            conditions.add("需登錄活動");
+            conditions.add(PromotionCondition.builder()
+                    .type("REGISTRATION_REQUIRED")
+                    .value("true")
+                    .label("需登錄活動")
+                    .build());
         }
 
         if (promotion.getFrequencyLimit() != null && !promotion.getFrequencyLimit().isBlank()) {
-            conditions.add("頻率限制 " + promotion.getFrequencyLimit().toUpperCase());
+            conditions.add(PromotionCondition.builder()
+                    .type("FREQUENCY_LIMIT")
+                    .value(promotion.getFrequencyLimit().toUpperCase())
+                    .label("頻率限制 " + promotion.getFrequencyLimit().toUpperCase())
+                    .build());
         }
 
-        return conditions.stream().distinct().toList();
+        return conditions.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                condition -> normalizeValue(condition.getType()) + ":" + normalizeValue(condition.getValue()),
+                                condition -> condition,
+                                (left, right) -> left,
+                                LinkedHashMap::new
+                        ),
+                        map -> List.copyOf(map.values())
+                ));
     }
 
     private String resolveCashbackSuffix(String cashbackType) {

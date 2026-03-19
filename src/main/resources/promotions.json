@@ -19,7 +19,10 @@
         "maxCashback": 300,
         "frequencyLimit": "MONTHLY",
         "requiresRegistration": true,
-        "conditions": ["需登錄活動", "每月回饋上限 300 元"],
+        "conditions": [
+            { "type": "TEXT", "value": "TRIP.COM", "label": "trip.com 線上訂票適用" },
+            { "type": "LOCATION_ONLY", "value": "TAIPEI", "label": "限台北活動頁" }
+        ],
         "excludedConditions": [],
         "status": "ACTIVE"
     },
@@ -43,7 +46,10 @@
         "maxCashback": 500,
         "frequencyLimit": "MONTHLY",
         "requiresRegistration": false,
-        "conditions": ["海外實體與線上外幣消費適用", "以外幣結帳時依銀行公告為準"],
+        "conditions": [
+            { "type": "TEXT", "value": "FOREIGN_CURRENCY", "label": "海外實體與線上外幣消費適用" },
+            { "type": "TEXT", "value": "BANK_NOTICE", "label": "以外幣結帳時依銀行公告為準" }
+        ],
         "excludedConditions": [],
         "status": "ACTIVE"
     },
@@ -67,7 +73,10 @@
         "maxCashback": 400,
         "frequencyLimit": "MONTHLY",
         "requiresRegistration": false,
-        "conditions": ["指定權益方案內之線上消費適用", "回饋依國泰世華公告為準"],
+        "conditions": [
+            { "type": "TEXT", "value": "BENEFIT_PLAN", "label": "指定權益方案內之線上消費適用" },
+            { "type": "TEXT", "value": "BANK_NOTICE", "label": "回饋依國泰世華公告為準" }
+        ],
         "excludedConditions": [],
         "status": "ACTIVE"
     },
@@ -91,7 +100,9 @@
         "maxCashback": 500,
         "frequencyLimit": "MONTHLY",
         "requiresRegistration": false,
-        "conditions": ["海外一般消費適用"],
+        "conditions": [
+            { "type": "TEXT", "value": "OVERSEAS_GENERAL", "label": "海外一般消費適用" }
+        ],
         "excludedConditions": [],
         "status": "ACTIVE"
     },
@@ -115,7 +126,9 @@
         "maxCashback": 200,
         "frequencyLimit": "MONTHLY",
         "requiresRegistration": true,
-        "conditions": ["需使用指定數位帳戶扣繳"],
+        "conditions": [
+            { "type": "TEXT", "value": "DIGITAL_ACCOUNT", "label": "需使用指定數位帳戶扣繳" }
+        ],
         "excludedConditions": [],
         "status": "ACTIVE"
     }

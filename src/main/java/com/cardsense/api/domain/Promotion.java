@@ -62,10 +62,10 @@ public class Promotion {
     @JsonAlias("requires_registration")
     private boolean requiresRegistration;
 
-    private List<String> conditions;
+    private List<PromotionCondition> conditions;
 
     @JsonAlias("excluded_conditions")
-    private List<String> excludedConditions;
+    private List<PromotionCondition> excludedConditions;
 
     private String status;
 }

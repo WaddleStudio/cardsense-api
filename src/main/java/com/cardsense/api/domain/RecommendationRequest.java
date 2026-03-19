@@ -29,6 +29,10 @@ public class RecommendationRequest {
 
     private List<String> cardCodes;
 
+    private List<String> registeredPromotionIds;
+
+    private List<BenefitUsage> benefitUsage;
+
     private String location;
 
     @JsonAlias("transaction_date")

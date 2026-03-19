@@ -23,6 +23,6 @@ public class CardRecommendation {
     private String promotionId;
     private String promoVersionId;
     private LocalDate validUntil;
-    private List<String> conditions;
+    private List<PromotionCondition> conditions;
     private String applyUrl;
 }
