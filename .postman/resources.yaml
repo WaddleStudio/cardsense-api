@@ -1,0 +1,12 @@
+# Use this workspace to collaborate
+workspace:
+  id: a3f9abb0-94c6-428c-9b5e-4ce6ae94f894
+cloudResources:
+  collections:
+    ..\postman\collections\CardSense API: d641da97-938c-4c1f-a8cb-78cf311c8822
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

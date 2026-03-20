@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/recommendations/card"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "amount": 1000,
+      "category": "ONLINE",
+      "date": "2026-03-20"
+    }
+scripts:
+  - type: afterResponse
+    code: >-
+      pm.test('status is 200', function () { pm.response.to.have.status(200);
+      });
+
+      pm.test('recommendations array exists', function () {
+      pm.expect(pm.response.json().recommendations).to.be.an('array'); });
+    language: text/javascript
+order: 5000

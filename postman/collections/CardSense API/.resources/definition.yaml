@@ -1,0 +1,11 @@
+$kind: collection
+description: Smoke-testable CardSense API collection for health, catalog, and
+  recommendation flows.
+variables:
+  baseUrl: http://localhost:8080
+  apiKey: dummy-api-key
+scripts:
+  - type: http:beforeRequest
+    code: "pm.request.headers.upsert({ key: 'X-Api-Key', value:
+      pm.collectionVariables.get('apiKey') });"
+    language: text/javascript

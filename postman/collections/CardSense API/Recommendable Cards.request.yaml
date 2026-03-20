@@ -1,0 +1,7 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/cards?bank=CATHAY&scope=RECOMMENDABLE"
+method: GET
+queryParams:
+  bank: CATHAY
+  scope: RECOMMENDABLE
+order: 4000

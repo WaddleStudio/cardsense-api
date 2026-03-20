@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/v1/recommendations/card"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "scenario": {
+        "amount": 1200,
+        "category": "ONLINE",
+        "date": "2026-03-20",
+        "channel": "ONLINE"
+      },
+      "comparison": {
+        "mode": "STACK_ALL_ELIGIBLE",
+        "includePromotionBreakdown": true,
+        "includeBreakEvenAnalysis": true,
+        "maxResults": 5
+      }
+    }
+order: 6000

@@ -1,0 +1,202 @@
+{
+  "info": {
+    "_postman_id": "7d75858a-ec70-4db7-b3a4-0bc362e8c210",
+    "name": "CardSense API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smoke-testable CardSense API collection for health, catalog, and recommendation flows."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "apiKey",
+      "value": "dummy-api-key"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.upsert({ key: 'X-Api-Key', value: pm.collectionVariables.get('apiKey') });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('health status is UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Cards By Bank",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/cards?bank=CATHAY",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "cards"
+          ],
+          "query": [
+            {
+              "key": "bank",
+              "value": "CATHAY"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Catalog Only Cards",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/cards?bank=CATHAY&scope=CATALOG_ONLY",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "cards"
+          ],
+          "query": [
+            {
+              "key": "bank",
+              "value": "CATHAY"
+            },
+            {
+              "key": "scope",
+              "value": "CATALOG_ONLY"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recommendable Cards",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v1/cards?bank=CATHAY&scope=RECOMMENDABLE",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "cards"
+          ],
+          "query": [
+            {
+              "key": "bank",
+              "value": "CATHAY"
+            },
+            {
+              "key": "scope",
+              "value": "RECOMMENDABLE"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recommend Card Minimal",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('recommendations array exists', function () { pm.expect(pm.response.json().recommendations).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 1000,\n  \"category\": \"ONLINE\",\n  \"date\": \"2026-03-20\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/recommendations/card",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "recommendations",
+            "card"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Recommend Card Stackability Scenario",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scenario\": {\n    \"amount\": 1200,\n    \"category\": \"ONLINE\",\n    \"date\": \"2026-03-20\",\n    \"channel\": \"ONLINE\"\n  },\n  \"comparison\": {\n    \"mode\": \"STACK_ALL_ELIGIBLE\",\n    \"includePromotionBreakdown\": true,\n    \"includeBreakEvenAnalysis\": true,\n    \"maxResults\": 5\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/v1/recommendations/card",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "recommendations",
+            "card"
+          ]
+        }
+      }
+    }
+  ]
+}
