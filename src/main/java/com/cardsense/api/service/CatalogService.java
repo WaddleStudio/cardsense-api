@@ -8,10 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -19,13 +21,14 @@ public class CatalogService {
 
     private final PromotionRepository promotionRepository;
 
-    public List<CardSummary> listCards(String bank, String status) {
-        return distinctPromotionsByCard().values().stream()
+    public List<CardSummary> listCards(String bank, String status, String scope) {
+        return promotionsByCard().values().stream()
                 .map(this::toCardSummary)
                 .filter(card -> matchesBank(card, bank))
                 .filter(card -> matchesStatus(card.getCardStatus(), status))
-            .sorted(Comparator.comparing(CardSummary::getBankCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
-                .thenComparing(CardSummary::getCardCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .filter(card -> matchesScope(card, scope))
+                .sorted(Comparator.comparing(CardSummary::getBankCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                        .thenComparing(CardSummary::getCardCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
     }
 
@@ -40,14 +43,20 @@ public class CatalogService {
                 .toList();
     }
 
-    private Map<String, Promotion> distinctPromotionsByCard() {
+    private Map<String, List<Promotion>> promotionsByCard() {
         return promotionRepository.findAllPromotions().stream()
-                .collect(LinkedHashMap<String, Promotion>::new,
-                        (map, promotion) -> map.putIfAbsent(promotion.getCardCode(), promotion),
+                .collect(LinkedHashMap<String, List<Promotion>>::new,
+                        (map, promotion) -> map.computeIfAbsent(cardKey(promotion), ignored -> new java.util.ArrayList<>()).add(promotion),
                         Map::putAll);
     }
 
-    private CardSummary toCardSummary(Promotion promotion) {
+    private CardSummary toCardSummary(List<Promotion> promotions) {
+        Promotion promotion = promotions.get(0);
+        Set<String> scopes = promotions.stream()
+                .map(Promotion::getRecommendationScope)
+                .map(this::normalizeScope)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
         return CardSummary.builder()
                 .cardCode(promotion.getCardCode())
                 .cardName(promotion.getCardName())
@@ -56,7 +65,18 @@ public class CatalogService {
                 .applyUrl(promotion.getApplyUrl())
                 .bankCode(promotion.getBankCode())
                 .bankName(promotion.getBankName())
+                .recommendationScopes(List.copyOf(scopes))
                 .build();
+    }
+
+    private String cardKey(Promotion promotion) {
+        if (promotion.getCardCode() != null && !promotion.getCardCode().isBlank()) {
+            return promotion.getCardCode();
+        }
+
+        return (promotion.getBankCode() == null ? "" : promotion.getBankCode())
+                + ":"
+                + (promotion.getCardName() == null ? "" : promotion.getCardName());
     }
 
     private BankSummary toBankSummary(Promotion promotion) {
@@ -85,5 +105,19 @@ public class CatalogService {
         }
 
         return requestedStatus.equalsIgnoreCase(actualStatus);
+    }
+
+    private boolean matchesScope(CardSummary card, String requestedScope) {
+        if (requestedScope == null || requestedScope.isBlank()) {
+            return true;
+        }
+
+        String normalizedRequestedScope = normalizeScope(requestedScope);
+        return card.getRecommendationScopes() != null
+                && card.getRecommendationScopes().stream().anyMatch(normalizedRequestedScope::equalsIgnoreCase);
+    }
+
+    private String normalizeScope(String scope) {
+        return scope == null || scope.isBlank() ? "RECOMMENDABLE" : scope.trim().toUpperCase(Locale.ROOT);
     }
 }

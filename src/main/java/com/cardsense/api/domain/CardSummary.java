@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,4 +19,5 @@ public class CardSummary {
     private String applyUrl;
     private String bankCode;
     private String bankName;
+    private List<String> recommendationScopes;
 }

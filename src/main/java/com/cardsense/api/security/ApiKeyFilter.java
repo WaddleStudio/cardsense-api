@@ -20,7 +20,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         // Skip security for health check
-        if (request.getRequestURI().startsWith("/v1/health")) {
+        if (isHealthEndpoint(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -38,5 +38,9 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     private boolean isAuthenticated(String apiKey) {
         // Simple equality check for MVP
         return MOCK_API_KEY.equals(apiKey);
+    }
+
+    private boolean isHealthEndpoint(String requestUri) {
+        return "/health".equals(requestUri) || requestUri.startsWith("/v1/health");
     }
 }

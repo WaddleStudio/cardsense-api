@@ -24,7 +24,7 @@ class CatalogServiceTest {
     }
 
     @Test
-    void listCardsSupportsBankAndStatusFilters() {
+    void listCardsSupportsBankStatusAndScopeFilters() {
         Promotion activeCtbc = Promotion.builder()
             .cardCode("CTBC_DEMO_ONLINE")
             .cardName("中國信託 示例網購卡")
@@ -32,6 +32,17 @@ class CatalogServiceTest {
                 .annualFee(1800)
                 .bankCode("CTBC")
                 .bankName("中國信託")
+                .recommendationScope("RECOMMENDABLE")
+                .build();
+
+        Promotion activeCtbcCatalog = Promotion.builder()
+            .cardCode("CTBC_DEMO_ONLINE")
+            .cardName("中國信託 示例網購卡")
+                .cardStatus("ACTIVE")
+                .annualFee(1800)
+                .bankCode("CTBC")
+                .bankName("中國信託")
+                .recommendationScope("CATALOG_ONLY")
                 .build();
 
         Promotion inactiveCube = Promotion.builder()
@@ -41,13 +52,16 @@ class CatalogServiceTest {
                 .annualFee(1800)
                 .bankCode("CATHAY")
                 .bankName("國泰世華")
+                .recommendationScope("CATALOG_ONLY")
                 .build();
 
-        when(promotionRepository.findAllPromotions()).thenReturn(List.of(activeCtbc, inactiveCube));
+        when(promotionRepository.findAllPromotions()).thenReturn(List.of(activeCtbc, activeCtbcCatalog, inactiveCube));
 
-        assertEquals(1, catalogService.listCards("CTBC", "ACTIVE").size());
-        assertTrue(catalogService.listCards(null, "ACTIVE").stream()
+        assertEquals(1, catalogService.listCards("CTBC", "ACTIVE", null).size());
+        assertTrue(catalogService.listCards(null, "ACTIVE", null).stream()
                 .allMatch(card -> "ACTIVE".equals(card.getCardStatus())));
+        assertEquals(2, catalogService.listCards(null, null, "CATALOG_ONLY").size());
+        assertEquals(List.of("RECOMMENDABLE", "CATALOG_ONLY"), catalogService.listCards("CTBC", null, null).get(0).getRecommendationScopes());
     }
 
     @Test

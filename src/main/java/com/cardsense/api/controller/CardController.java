@@ -21,7 +21,8 @@ public class CardController {
     @GetMapping
     public ResponseEntity<List<CardSummary>> listCards(
             @RequestParam(required = false) String bank,
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(catalogService.listCards(bank, status));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String scope) {
+        return ResponseEntity.ok(catalogService.listCards(bank, status, scope));
     }
 }
