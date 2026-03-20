@@ -7,6 +7,7 @@ import com.cardsense.api.domain.ComparisonMode;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.PromotionRewardBreakdown;
+import com.cardsense.api.domain.PromotionStackability;
 import com.cardsense.api.domain.RecommendationComparisonSummary;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
@@ -20,10 +21,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -167,21 +170,189 @@ public class DecisionEngine {
     }
 
     private CardAggregate toCardAggregate(List<ScoredPromotion> promotions, ComparisonMode comparisonMode) {
-        ScoredPromotion primary = promotions.get(0);
-        int totalReturn = comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE
-                ? promotions.stream().mapToInt(ScoredPromotion::cappedReturn).sum()
-                : primary.cappedReturn();
-
-        List<ScoredPromotion> contributingPromotions = comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE
-                ? List.copyOf(promotions)
-                : List.of(primary);
-
         List<String> notes = new ArrayList<>();
-        if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE && promotions.size() > 1) {
-            notes.add("STACK_ALL_ELIGIBLE 目前會把所有符合條件的優惠視為可並存，正式上線前仍需補 stackability metadata 驗證。");
+        List<ScoredPromotion> contributingPromotions;
+        if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE) {
+            StackResolution resolution = resolveContributingPromotions(promotions);
+            contributingPromotions = resolution.contributingPromotions();
+            notes.addAll(resolution.notes());
+        } else {
+            contributingPromotions = List.of(promotions.get(0));
         }
 
+        ScoredPromotion primary = contributingPromotions.get(0);
+        int totalReturn = contributingPromotions.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
+
         return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes);
+    }
+
+    private StackResolution resolveContributingPromotions(List<ScoredPromotion> promotions) {
+        if (promotions.size() <= 1) {
+            return new StackResolution(List.of(promotions.get(0)), List.of());
+        }
+        if (promotions.size() > 15) {
+            return new StackResolution(
+                    List.of(promotions.get(0)),
+                    List.of("同卡符合條件的優惠數量過多，本次僅保守採用代表優惠，避免 stackability 組合搜尋成本過高。")
+            );
+        }
+
+        List<ScoredPromotion> bestSelection = List.of(promotions.get(0));
+        int selectionCount = 1 << promotions.size();
+
+        for (int mask = 1; mask < selectionCount; mask++) {
+            List<ScoredPromotion> selection = new ArrayList<>();
+            for (int index = 0; index < promotions.size(); index++) {
+                if ((mask & (1 << index)) != 0) {
+                    selection.add(promotions.get(index));
+                }
+            }
+
+            if (!isValidStackSelection(selection)) {
+                continue;
+            }
+
+            if (compareSelection(selection, bestSelection) > 0) {
+                bestSelection = List.copyOf(selection);
+            }
+        }
+
+        List<String> notes = new ArrayList<>();
+        if (bestSelection.size() > 1) {
+            notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
+        }
+        if (promotions.size() > bestSelection.size()) {
+            notes.add("部分符合條件的優惠未納入卡片總回饋，原因可能是缺少 stackability metadata、未滿足 requires 條件，或與已選優惠互斥。");
+        }
+
+        return new StackResolution(bestSelection, notes);
+    }
+
+    private boolean isValidStackSelection(List<ScoredPromotion> selection) {
+        if (selection.isEmpty()) {
+            return false;
+        }
+        if (selection.size() == 1) {
+            return true;
+        }
+
+        Set<String> selectedPromoVersionIds = selection.stream()
+                .map(scoredPromotion -> normalizeValue(scoredPromotion.promotion().getPromoVersionId()))
+                .collect(Collectors.toCollection(HashSet::new));
+
+        for (ScoredPromotion scoredPromotion : selection) {
+            PromotionStackability stackability = scoredPromotion.promotion().getStackability();
+            if (!hasDeterministicStackability(scoredPromotion.promotion())) {
+                return false;
+            }
+
+            Set<String> requiredPromoVersionIds = normalizeValues(stackability.getRequiresPromoVersionIds());
+            if (!selectedPromoVersionIds.containsAll(requiredPromoVersionIds)) {
+                return false;
+            }
+
+            Set<String> excludedPromoVersionIds = normalizeValues(stackability.getExcludesPromoVersionIds());
+            if (selection.stream()
+                    .map(candidate -> normalizeValue(candidate.promotion().getPromoVersionId()))
+                    .filter(candidateId -> !candidateId.equals(normalizeValue(scoredPromotion.promotion().getPromoVersionId())))
+                    .anyMatch(excludedPromoVersionIds::contains)) {
+                return false;
+            }
+
+            Set<String> allowedPromoVersionIds = normalizeValues(stackability.getStackWithPromoVersionIds());
+            if (!allowedPromoVersionIds.isEmpty()) {
+                for (ScoredPromotion peerPromotion : selection) {
+                    String peerPromoVersionId = normalizeValue(peerPromotion.promotion().getPromoVersionId());
+                    if (peerPromoVersionId.equals(normalizeValue(scoredPromotion.promotion().getPromoVersionId()))) {
+                        continue;
+                    }
+                    if (!allowedPromoVersionIds.contains(peerPromoVersionId) && !requiredPromoVersionIds.contains(peerPromoVersionId)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        for (int leftIndex = 0; leftIndex < selection.size(); leftIndex++) {
+            for (int rightIndex = leftIndex + 1; rightIndex < selection.size(); rightIndex++) {
+                if (!canCoexist(selection.get(leftIndex).promotion(), selection.get(rightIndex).promotion())) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private boolean canCoexist(Promotion leftPromotion, Promotion rightPromotion) {
+        if (!hasDeterministicStackability(leftPromotion) || !hasDeterministicStackability(rightPromotion)) {
+            return false;
+        }
+
+        PromotionStackability leftStackability = leftPromotion.getStackability();
+        PromotionStackability rightStackability = rightPromotion.getStackability();
+
+        String leftPromoVersionId = normalizeValue(leftPromotion.getPromoVersionId());
+        String rightPromoVersionId = normalizeValue(rightPromotion.getPromoVersionId());
+        if (normalizeValues(leftStackability.getExcludesPromoVersionIds()).contains(rightPromoVersionId)
+                || normalizeValues(rightStackability.getExcludesPromoVersionIds()).contains(leftPromoVersionId)) {
+            return false;
+        }
+
+        String leftRelationshipMode = normalizeValue(leftStackability.getRelationshipMode());
+        String rightRelationshipMode = normalizeValue(rightStackability.getRelationshipMode());
+        String leftGroupId = normalizeValue(leftStackability.getGroupId());
+        String rightGroupId = normalizeValue(rightStackability.getGroupId());
+        if (!leftGroupId.isBlank()
+                && leftGroupId.equals(rightGroupId)
+                && ("MUTUALLY_EXCLUSIVE".equals(leftRelationshipMode) || "MUTUALLY_EXCLUSIVE".equals(rightRelationshipMode))) {
+            return false;
+        }
+
+        Set<String> leftAllowedPromoVersionIds = normalizeValues(leftStackability.getStackWithPromoVersionIds());
+        if (!leftAllowedPromoVersionIds.isEmpty() && !leftAllowedPromoVersionIds.contains(rightPromoVersionId)) {
+            return false;
+        }
+
+        Set<String> rightAllowedPromoVersionIds = normalizeValues(rightStackability.getStackWithPromoVersionIds());
+        return rightAllowedPromoVersionIds.isEmpty() || rightAllowedPromoVersionIds.contains(leftPromoVersionId);
+    }
+
+    private int compareSelection(List<ScoredPromotion> leftSelection, List<ScoredPromotion> rightSelection) {
+        int leftTotal = leftSelection.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
+        int rightTotal = rightSelection.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
+        if (leftTotal != rightTotal) {
+            return Integer.compare(leftTotal, rightTotal);
+        }
+
+        Comparator<ScoredPromotion> promotionComparator = recommendationComparator();
+        int primaryComparison = promotionComparator.compare(leftSelection.get(0), rightSelection.get(0));
+        if (primaryComparison != 0) {
+            return -primaryComparison;
+        }
+
+        return Integer.compare(leftSelection.size(), rightSelection.size());
+    }
+
+    private boolean hasDeterministicStackability(Promotion promotion) {
+        PromotionStackability stackability = promotion.getStackability();
+        if (stackability == null) {
+            return false;
+        }
+
+        String relationshipMode = normalizeValue(stackability.getRelationshipMode());
+        return !relationshipMode.isBlank() && !"MANUAL_REVIEW".equals(relationshipMode);
+    }
+
+    private Set<String> normalizeValues(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return Set.of();
+        }
+
+        return values.stream()
+                .map(this::normalizeValue)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     private String distinctCardKey(ScoredPromotion scoredPromotion) {
@@ -261,18 +432,33 @@ public class DecisionEngine {
                             .estimatedReturn(scoredPromotion.estimatedReturn())
                             .cappedReturn(scoredPromotion.cappedReturn())
                             .contributesToCardTotal(contributes)
-                            .assumedStackable(comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE && cardAggregate.allEligiblePromotions().size() > 1)
+                                .assumedStackable(false)
                             .validUntil(promotion.getValidUntil())
                             .conditions(buildRecommendationConditions(promotion))
-                            .reason(String.format(
-                                    "%s：預估回饋 $%d 元，封頂後 $%d 元。",
-                                    contributes ? "計入卡片總回饋" : "僅作為比較參考",
-                                    scoredPromotion.estimatedReturn(),
-                                    scoredPromotion.cappedReturn()))
+                                .reason(buildBreakdownReason(cardAggregate, comparisonMode, scoredPromotion, contributes))
                             .build();
                 })
                 .toList();
     }
+
+                    private String buildBreakdownReason(
+                        CardAggregate cardAggregate,
+                        ComparisonMode comparisonMode,
+                        ScoredPromotion scoredPromotion,
+                        boolean contributes
+                    ) {
+                    if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE && cardAggregate.contributingPromotions().size() > 1) {
+                        return contributes
+                            ? "依 stackability metadata 判定可計入卡片總回饋。"
+                            : "未納入卡片總回饋：缺少 stackability metadata、未滿足 requires 條件，或與已選優惠互斥。";
+                    }
+
+                    return String.format(
+                        "%s：預估回饋 $%d 元，封頂後 $%d 元。",
+                        contributes ? "計入卡片總回饋" : "僅作為比較參考",
+                        scoredPromotion.estimatedReturn(),
+                        scoredPromotion.cappedReturn());
+                    }
 
     private boolean matchesChannel(Promotion promotion, String requestChannel) {
         String normalizedRequestChannel = normalizeValue(requestChannel);
@@ -422,7 +608,7 @@ public class DecisionEngine {
     ) {
         List<String> notes = new ArrayList<>();
         if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE) {
-            notes.add("多優惠並存模式目前採用 heuristic aggregation；若未來要精準上線，需在 promotion schema 補可疊加關係。");
+            notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
         }
         if (breakEvenAnalyses.isEmpty()) {
             notes.add("本次比較沒有可計算的 FIXED vs PERCENT/POINTS break-even pair，或呼叫端未要求輸出 break-even 分析。");
@@ -525,4 +711,10 @@ public class DecisionEngine {
             List<String> notes
     ) {
     }
+
+        private record StackResolution(
+            List<ScoredPromotion> contributingPromotions,
+            List<String> notes
+        ) {
+        }
 }

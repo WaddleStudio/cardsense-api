@@ -2,6 +2,7 @@ package com.cardsense.api.repository;
 
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
+import com.cardsense.api.domain.PromotionStackability;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -26,7 +27,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
                    bank_code, bank_name, category, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
-                     recommendation_scope, conditions_json, excluded_conditions_json, status
+                                         recommendation_scope, conditions_json, excluded_conditions_json, status, raw_payload_json
             FROM promotion_current
             """;
 
@@ -112,6 +113,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
                         .frequencyLimit(resultSet.getString("frequency_limit"))
                         .requiresRegistration(resultSet.getInt("requires_registration") == 1)
                         .recommendationScope(resultSet.getString("recommendation_scope"))
+                        .stackability(parseStackability(resultSet.getString("raw_payload_json")))
                         .conditions(parseConditions(resultSet.getString("conditions_json")))
                         .excludedConditions(parseConditions(resultSet.getString("excluded_conditions_json")))
                         .status(resultSet.getString("status"))
@@ -128,6 +130,20 @@ public class SqlitePromotionRepository implements PromotionRepository {
             return List.of();
         }
         return objectMapper.readValue(json, new TypeReference<List<PromotionCondition>>() {});
+    }
+
+    private PromotionStackability parseStackability(String rawPayloadJson) throws Exception {
+        if (rawPayloadJson == null || rawPayloadJson.isBlank()) {
+            return null;
+        }
+
+        var root = objectMapper.readTree(rawPayloadJson);
+        var stackabilityNode = root.get("stackability");
+        if (stackabilityNode == null || stackabilityNode.isNull()) {
+            return null;
+        }
+
+        return objectMapper.treeToValue(stackabilityNode, PromotionStackability.class);
     }
 
     private LocalDate parseDate(String value) {

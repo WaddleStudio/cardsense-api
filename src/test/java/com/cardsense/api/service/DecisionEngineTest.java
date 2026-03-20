@@ -4,6 +4,7 @@ import com.cardsense.api.domain.BenefitUsage;
 import com.cardsense.api.domain.ComparisonMode;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
+import com.cardsense.api.domain.PromotionStackability;
 import com.cardsense.api.domain.RecommendationComparisonOptions;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
@@ -134,10 +135,70 @@ public class DecisionEngineTest {
                 .build());
 
         assertEquals(1, response.getRecommendations().size());
-        assertEquals(80, response.getRecommendations().get(0).getEstimatedReturn());
+        assertEquals(50, response.getRecommendations().get(0).getEstimatedReturn());
         assertEquals("STACK_ALL_ELIGIBLE", response.getRecommendations().get(0).getRankingMode());
         assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().size());
-        assertTrue(response.getRecommendations().get(0).getPromotionBreakdown().stream().allMatch(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())));
+        assertEquals(1, response.getRecommendations().get(0).getPromotionBreakdown().stream().filter(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())).count());
+    }
+
+    @Test
+    public void testRecommendStacksOnlyMetadataCompatiblePromotions() {
+        Promotion basePromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        basePromo.setStackability(stackability("ALWAYS_STACKABLE", null, null, null, List.of("ver2")));
+
+        Promotion bonusPromo = buildPromotion("promo2", "ver2", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(50), 50, 1800, LocalDate.of(2026, 5, 31));
+        bonusPromo.setCashbackType("FIXED");
+        bonusPromo.setMaxCashback(null);
+        bonusPromo.setStackability(stackability("CONDITIONAL", null, List.of("ver1"), null, List.of("ver1")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(basePromo, bonusPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .date(LocalDate.now())
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
+                        .includePromotionBreakdown(true)
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(80, response.getRecommendations().get(0).getEstimatedReturn());
+        assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().stream().filter(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())).count());
+        assertTrue(response.getComparison().getNotes().stream().anyMatch(note -> note.contains("stackability")));
+    }
+
+    @Test
+    public void testRecommendDoesNotStackMutuallyExclusivePromotions() {
+        Promotion higherPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(50), 50, 1800, LocalDate.of(2026, 6, 30));
+        higherPromo.setCashbackType("FIXED");
+        higherPromo.setMaxCashback(null);
+        higherPromo.setStackability(stackability("MUTUALLY_EXCLUSIVE", "ctbc-base", null, null, null));
+
+        Promotion lowerPromo = buildPromotion("promo2", "ver2", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(40), 40, 1800, LocalDate.of(2026, 5, 31));
+        lowerPromo.setCashbackType("FIXED");
+        lowerPromo.setMaxCashback(null);
+        lowerPromo.setStackability(stackability("MUTUALLY_EXCLUSIVE", "ctbc-base", null, null, null));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(higherPromo, lowerPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .date(LocalDate.now())
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
+                        .includePromotionBreakdown(true)
+                        .build())
+                .build());
+
+        assertEquals(50, response.getRecommendations().get(0).getEstimatedReturn());
+        assertEquals(1, response.getRecommendations().get(0).getPromotionBreakdown().stream().filter(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())).count());
     }
 
     @Test
@@ -320,4 +381,20 @@ public class DecisionEngineTest {
                 .label(label)
                 .build();
     }
+
+        private PromotionStackability stackability(
+                        String relationshipMode,
+                        String groupId,
+                        List<String> requiresPromoVersionIds,
+                        List<String> excludesPromoVersionIds,
+                        List<String> stackWithPromoVersionIds
+        ) {
+                return PromotionStackability.builder()
+                                .relationshipMode(relationshipMode)
+                                .groupId(groupId)
+                                .requiresPromoVersionIds(requiresPromoVersionIds)
+                                .excludesPromoVersionIds(excludesPromoVersionIds)
+                                .stackWithPromoVersionIds(stackWithPromoVersionIds)
+                                .build();
+        }
 }

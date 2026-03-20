@@ -110,7 +110,7 @@ public class RecommendationComparisonSummary {
 - Compute reward in transaction-currency terms before ranking; never compare raw `cashbackValue` directly across reward types.
 - Group eligible promotions by card before final ranking.
 - `BEST_SINGLE_PROMOTION` uses the highest-ranked single promotion as the card score.
-- `STACK_ALL_ELIGIBLE` sums all currently eligible promotions for the same card and returns a breakdown. Shared contracts now define explicit `promotion.stackability` metadata, but the current engine has not fully consumed those rules yet.
+- `STACK_ALL_ELIGIBLE` resolves card-level contributing promotions from explicit `promotion.stackability` metadata and returns a breakdown. Promotions without usable metadata are not auto-stacked and fall back to a single representative promotion.
 - Rank cards by effective return desc, validUntil asc, annualFee asc, then stable bank/card/promo tie-breakers.
 - Return `comparison` metadata so callers know which mode and assumptions were applied.
 
@@ -142,4 +142,4 @@ public class Condition {
 ## Product Direction
 - The comparison unit is the card, not a standalone promotion.
 - A representative promotion remains in the response for backward compatibility and explainability.
-- Long term, the engine should consume the explicit stackability / exclusivity metadata already defined in shared contracts so `STACK_ALL_ELIGIBLE` can evolve from heuristic to deterministic coexistence.
+- Long term, the engine should stop depending on `raw_payload_json` fallback parsing and consume first-class stackability columns from SQLite / PostgreSQL storage.

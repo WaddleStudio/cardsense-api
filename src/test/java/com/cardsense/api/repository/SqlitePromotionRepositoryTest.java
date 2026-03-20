@@ -11,6 +11,7 @@ import java.sql.Statement;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class SqlitePromotionRepositoryTest {
 
@@ -67,7 +68,7 @@ class SqlitePromotionRepositoryTest {
                         3000, 'https://example.com/apply', 'OVERSEAS', 'ONLINE', 'PERCENT', 10.0, 0,
                         500, 'MONTHLY', 1, 'RECOMMENDABLE', '2026-01-01', '2026-12-31',
                         '[{"type":"TEXT","value":"JP","label":"日本適用"}]', '[]', 'https://example.com/source', 'hash', 'summary',
-                        'extractor-0.2.0', '2026-03-19T00:00:00Z', 1.0, 'ACTIVE', '{}'
+                            'extractor-0.2.0', '2026-03-19T00:00:00Z', 1.0, 'ACTIVE', '{"stackability":{"benefitLayer":"BASE","relationshipMode":"ALWAYS_STACKABLE","groupId":"esun-overseas","priority":100,"requiresPromoVersionIds":[],"excludesPromoVersionIds":[],"stackWithPromoVersionIds":[],"notes":"base reward"}}'
                     )
                     """);
         }
@@ -80,6 +81,8 @@ class SqlitePromotionRepositoryTest {
         assertEquals("ESUN_CARD", repository.findActivePromotions(LocalDate.of(2026, 3, 19)).get(0).getCardCode());
         assertEquals(1, repository.findActivePromotions(LocalDate.of(2026, 3, 19)).get(0).getConditions().size());
         assertEquals("RECOMMENDABLE", repository.findActivePromotions(LocalDate.of(2026, 3, 19)).get(0).getRecommendationScope());
+        assertNotNull(repository.findActivePromotions(LocalDate.of(2026, 3, 19)).get(0).getStackability());
+        assertEquals("ALWAYS_STACKABLE", repository.findActivePromotions(LocalDate.of(2026, 3, 19)).get(0).getStackability().getRelationshipMode());
 
         Files.deleteIfExists(databasePath);
     }
