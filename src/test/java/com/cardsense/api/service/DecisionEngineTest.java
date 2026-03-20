@@ -210,6 +210,25 @@ public class DecisionEngineTest {
         assertTrue(exhausted.getRecommendations().isEmpty());
     }
 
+        @Test
+        public void testRecommendSkipsCatalogOnlyAndFutureScopePromotions() {
+                Promotion catalogOnlyPromo = buildPromotion("promo1", "ver1", "ESUN_DEMO_SERVICE", "玉山服務卡", "ESUN", "玉山銀行", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+                catalogOnlyPromo.setRecommendationScope("CATALOG_ONLY");
+
+                Promotion futureScopePromo = buildPromotion("promo2", "ver2", "ESUN_DEMO_INSURANCE", "玉山保費卡", "ESUN", "玉山銀行", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+                futureScopePromo.setRecommendationScope("FUTURE_SCOPE");
+
+                when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(catalogOnlyPromo, futureScopePromo));
+
+                RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                                .amount(1000)
+                                .category("ONLINE")
+                                .date(LocalDate.now())
+                                .build());
+
+                assertTrue(response.getRecommendations().isEmpty());
+        }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)
@@ -219,6 +238,7 @@ public class DecisionEngineTest {
                 .bankCode(bankCode)
                 .bankName(bankName)
                 .category("ONLINE")
+                .recommendationScope("RECOMMENDABLE")
                 .cashbackType("PERCENT")
                 .cashbackValue(cashbackValue)
                 .maxCashback(maxCashback)

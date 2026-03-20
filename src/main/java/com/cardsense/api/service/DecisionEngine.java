@@ -63,6 +63,10 @@ public class DecisionEngine {
             return false;
         }
 
+        if (!isRecommendationScopeEligible(p)) {
+            return false;
+        }
+
         if (p.getCardStatus() != null && !"ACTIVE".equalsIgnoreCase(p.getCardStatus())) {
             return false;
         }
@@ -103,6 +107,13 @@ public class DecisionEngine {
         }
 
         return true;
+    }
+
+    private boolean isRecommendationScopeEligible(Promotion promotion) {
+        String recommendationScope = promotion.getRecommendationScope();
+        return recommendationScope == null
+                || recommendationScope.isBlank()
+                || "RECOMMENDABLE".equalsIgnoreCase(recommendationScope);
     }
 
     private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {

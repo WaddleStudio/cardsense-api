@@ -26,7 +26,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
                    bank_code, bank_name, category, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
-                   conditions_json, excluded_conditions_json, status
+                     recommendation_scope, conditions_json, excluded_conditions_json, status
             FROM promotion_current
             """;
 
@@ -111,6 +111,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
                         .maxCashback((Integer) resultSet.getObject("max_cashback"))
                         .frequencyLimit(resultSet.getString("frequency_limit"))
                         .requiresRegistration(resultSet.getInt("requires_registration") == 1)
+                        .recommendationScope(resultSet.getString("recommendation_scope"))
                         .conditions(parseConditions(resultSet.getString("conditions_json")))
                         .excludedConditions(parseConditions(resultSet.getString("excluded_conditions_json")))
                         .status(resultSet.getString("status"))

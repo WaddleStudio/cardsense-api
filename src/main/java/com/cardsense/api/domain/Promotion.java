@@ -64,6 +64,8 @@ public class Promotion {
     @JsonAlias("requires_registration")
     private boolean requiresRegistration;
 
+    private String recommendationScope;
+
     private List<PromotionCondition> conditions;
 
     @JsonAlias("excluded_conditions")

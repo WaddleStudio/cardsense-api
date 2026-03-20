@@ -12,6 +12,7 @@
 ## 目前推薦規則重點
 - 同一卡只保留最佳 promotion 進榜
 - 停發卡與零回饋 promotion 不進榜
+- 僅 `recommendationScope=RECOMMENDABLE` 的 promotion 會進入 recommendation engine
 - `requiresRegistration` 會讀取 request 的 `registeredPromotionIds`
 - `frequencyLimit` / `maxCashback` 會讀取 request 的 `benefitUsage`
 - `conditions` / `excludedConditions` 使用結構化 condition object，而非 magic string
