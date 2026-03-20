@@ -15,6 +15,8 @@ import java.util.List;
 public class RecommendationResponse {
 
     private String requestId;
+    private RecommendationScenario scenario;
+    private RecommendationComparisonSummary comparison;
     private List<CardRecommendation> recommendations;
     private LocalDateTime generatedAt;
     private String disclaimer;

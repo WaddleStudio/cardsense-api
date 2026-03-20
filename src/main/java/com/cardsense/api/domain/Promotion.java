@@ -66,6 +66,8 @@ public class Promotion {
 
     private String recommendationScope;
 
+    private PromotionStackability stackability;
+
     private List<PromotionCondition> conditions;
 
     @JsonAlias("excluded_conditions")

@@ -13,21 +13,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CardRecommendation {
-    private String cardCode;
-    private String cardName;
-    private String bankCode;
-    private String bankName;
+public class PromotionRewardBreakdown {
+    private String promotionId;
+    private String promoVersionId;
+    private String title;
     private String cashbackType;
     private BigDecimal cashbackValue;
     private Integer estimatedReturn;
-    private Integer matchedPromotionCount;
-    private String rankingMode;
-    private String reason;
-    private String promotionId;
-    private String promoVersionId;
+    private Integer cappedReturn;
+    private Boolean contributesToCardTotal;
+    private Boolean assumedStackable;
     private LocalDate validUntil;
     private List<PromotionCondition> conditions;
-    private List<PromotionRewardBreakdown> promotionBreakdown;
-    private String applyUrl;
+    private String reason;
 }

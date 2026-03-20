@@ -1,9 +1,8 @@
 package com.cardsense.api.domain;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.AssertTrue;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,12 +17,9 @@ import java.util.List;
 @Builder
 public class RecommendationRequest {
 
-    @NotNull(message = "Transaction amount is required")
-    @Min(value = 0, message = "Transaction amount must be non-negative")
     @JsonAlias("transaction_amount")
     private Integer amount;
 
-    @NotBlank(message = "Category is required")
     @JsonAlias("merchant_category")
     private String category;
 
@@ -37,4 +33,106 @@ public class RecommendationRequest {
 
     @JsonAlias("transaction_date")
     private LocalDate date;
+
+    private RecommendationScenario scenario;
+
+    private RecommendationComparisonOptions comparison;
+
+    @JsonIgnore
+    public Integer getResolvedAmount() {
+        return scenario != null && scenario.getAmount() != null ? scenario.getAmount() : amount;
+    }
+
+    @JsonIgnore
+    public String getResolvedCategory() {
+        return scenario != null && scenario.getCategory() != null && !scenario.getCategory().isBlank()
+                ? scenario.getCategory()
+                : category;
+    }
+
+    @JsonIgnore
+    public String getResolvedLocation() {
+        return scenario != null && scenario.getLocation() != null && !scenario.getLocation().isBlank()
+                ? scenario.getLocation()
+                : location;
+    }
+
+    @JsonIgnore
+    public LocalDate getResolvedDate() {
+        return scenario != null && scenario.getDate() != null ? scenario.getDate() : date;
+    }
+
+    @JsonIgnore
+    public String getResolvedChannel() {
+        return scenario != null ? scenario.getChannel() : null;
+    }
+
+    @JsonIgnore
+    public RecommendationScenario toResolvedScenario() {
+        RecommendationScenario baseScenario = scenario == null ? new RecommendationScenario() : scenario;
+        return RecommendationScenario.builder()
+                .amount(getResolvedAmount())
+                .category(getResolvedCategory())
+                .date(getResolvedDate())
+                .location(getResolvedLocation())
+                .channel(baseScenario.getChannel())
+                .merchantName(baseScenario.getMerchantName())
+                .merchantId(baseScenario.getMerchantId())
+                .paymentMethod(baseScenario.getPaymentMethod())
+                .installmentCount(baseScenario.getInstallmentCount())
+                .newCustomer(baseScenario.getNewCustomer())
+                .customerSegment(baseScenario.getCustomerSegment())
+                .membershipTier(baseScenario.getMembershipTier())
+                .tags(baseScenario.getTags())
+                .attributes(baseScenario.getAttributes())
+                .build();
+    }
+
+    @JsonIgnore
+    public ComparisonMode getResolvedComparisonMode() {
+        if (comparison == null || comparison.getMode() == null) {
+            return ComparisonMode.BEST_SINGLE_PROMOTION;
+        }
+        return comparison.getMode();
+    }
+
+    @JsonIgnore
+    public boolean shouldIncludePromotionBreakdown() {
+        return comparison == null || comparison.getIncludePromotionBreakdown() == null || comparison.getIncludePromotionBreakdown();
+    }
+
+    @JsonIgnore
+    public boolean shouldIncludeBreakEvenAnalysis() {
+        return comparison != null && Boolean.TRUE.equals(comparison.getIncludeBreakEvenAnalysis());
+    }
+
+    @JsonIgnore
+    public int getResolvedMaxResults() {
+        if (comparison == null || comparison.getMaxResults() == null || comparison.getMaxResults() <= 0) {
+            return 5;
+        }
+        return comparison.getMaxResults();
+    }
+
+    @JsonIgnore
+    public List<String> getResolvedCardCodes() {
+        if (comparison != null && comparison.getCompareCardCodes() != null && !comparison.getCompareCardCodes().isEmpty()) {
+            return comparison.getCompareCardCodes();
+        }
+        return cardCodes;
+    }
+
+    @AssertTrue(message = "Scenario amount is required and must be non-negative")
+    @JsonIgnore
+    public boolean isResolvedAmountValid() {
+        Integer resolvedAmount = getResolvedAmount();
+        return resolvedAmount != null && resolvedAmount >= 0;
+    }
+
+    @AssertTrue(message = "Scenario category is required")
+    @JsonIgnore
+    public boolean isResolvedCategoryValid() {
+        String resolvedCategory = getResolvedCategory();
+        return resolvedCategory != null && !resolvedCategory.isBlank();
+    }
 }

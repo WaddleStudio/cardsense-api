@@ -1,10 +1,13 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.BenefitUsage;
+import com.cardsense.api.domain.ComparisonMode;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
+import com.cardsense.api.domain.RecommendationComparisonOptions;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
+import com.cardsense.api.domain.RecommendationScenario;
 import com.cardsense.api.repository.PromotionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +67,8 @@ public class DecisionEngineTest {
         assertTrue(response.getRecommendations().get(1).getConditions().stream().anyMatch(condition -> "REGISTRATION_REQUIRED".equals(condition.getType())));
         assertEquals(DecisionEngine.DISCLAIMER, response.getDisclaimer());
         assertNotNull(response.getRequestId());
+                assertEquals(ComparisonMode.BEST_SINGLE_PROMOTION, response.getComparison().getMode());
+                assertEquals(1000, response.getScenario().getAmount());
     }
 
     @Test
@@ -103,6 +108,65 @@ public class DecisionEngineTest {
 
         assertEquals(1, response.getRecommendations().size());
         assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
+        assertEquals(2, response.getRecommendations().get(0).getMatchedPromotionCount());
+        assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().size());
+    }
+
+    @Test
+    public void testRecommendStacksEligiblePromotionsWhenRequested() {
+        Promotion percentPromo = buildPromotion("promo1", "ver1", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        Promotion fixedPromo = buildPromotion("promo2", "ver2", "CTBC_DEMO_ONLINE", "中國信託 示例網購卡", "CTBC", "中國信託", BigDecimal.valueOf(50), 50, 1800, LocalDate.of(2026, 5, 31));
+        fixedPromo.setCashbackType("FIXED");
+        fixedPromo.setMaxCashback(null);
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(percentPromo, fixedPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .date(LocalDate.now())
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
+                        .includePromotionBreakdown(true)
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(80, response.getRecommendations().get(0).getEstimatedReturn());
+        assertEquals("STACK_ALL_ELIGIBLE", response.getRecommendations().get(0).getRankingMode());
+        assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().size());
+        assertTrue(response.getRecommendations().get(0).getPromotionBreakdown().stream().allMatch(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())));
+    }
+
+    @Test
+    public void testRecommendBuildsBreakEvenAnalysisForFixedVsPercent() {
+        Promotion fixedPromo = buildPromotion("promo1", "ver1", "CARD_FIXED", "固定回饋卡", "CTBC", "中國信託", BigDecimal.valueOf(50), null, 1800, LocalDate.of(2026, 6, 30));
+        fixedPromo.setCashbackType("FIXED");
+        fixedPromo.setMaxCashback(null);
+
+        Promotion percentPromo = buildPromotion("promo2", "ver2", "CARD_PERCENT", "百分比回饋卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), 120, 1800, LocalDate.of(2026, 6, 30));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(fixedPromo, percentPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .location("Taipei Xinyi")
+                        .date(LocalDate.of(2026, 3, 20))
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .includeBreakEvenAnalysis(true)
+                        .build())
+                .build());
+
+        assertNotNull(response.getComparison());
+        assertTrue(response.getComparison().getBreakEvenEvaluated());
+        assertEquals(1667, response.getComparison().getBreakEvenAnalyses().get(0).getBreakEvenAmount());
+        assertEquals(1000, response.getScenario().getAmount());
+        assertEquals("ONLINE", response.getScenario().getCategory());
     }
 
     @Test
