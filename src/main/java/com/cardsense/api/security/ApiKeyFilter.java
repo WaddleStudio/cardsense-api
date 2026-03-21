@@ -19,8 +19,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip security for health check
-        if (isHealthEndpoint(request.getRequestURI())) {
+        // Skip security for public read-only endpoints
+        if (isPublicEndpoint(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -40,7 +40,11 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         return MOCK_API_KEY.equals(apiKey);
     }
 
-    private boolean isHealthEndpoint(String requestUri) {
-        return "/health".equals(requestUri) || requestUri.startsWith("/v1/health");
+    private boolean isPublicEndpoint(String uri) {
+        return "/health".equals(uri)
+                || uri.startsWith("/v1/health")
+                || uri.startsWith("/v1/banks")
+                || uri.startsWith("/v1/cards")
+                || uri.startsWith("/v1/recommend");
     }
 }
