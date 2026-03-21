@@ -19,8 +19,9 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip security for public read-only endpoints
-        if (isPublicEndpoint(request.getRequestURI())) {
+        // Skip security for CORS preflight and public read-only endpoints
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())
+                || isPublicEndpoint(request.getRequestURI())) {
             filterChain.doFilter(request, response);
             return;
         }
