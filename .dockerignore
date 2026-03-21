@@ -1,0 +1,9 @@
+target/
+.git/
+.idea/
+*.iml
+.vscode/
+README.md
+IMPLEMENTATION_CHECKLIST.md
+VIBE_SPEC.md
+postman/
