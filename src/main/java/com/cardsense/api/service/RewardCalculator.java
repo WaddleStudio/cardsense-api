@@ -32,10 +32,11 @@ public class RewardCalculator {
         int rawReward = reward.intValue();
 
         if (promotion.getMaxCashback() != null && promotion.getMaxCashback() > 0) {
-            return Math.min(rawReward, promotion.getMaxCashback());
+            rawReward = Math.min(rawReward, promotion.getMaxCashback());
         }
 
-        return rawReward;
+        // Sanity guard: reward should never exceed the transaction amount
+        return Math.min(rawReward, transactionAmount);
     }
 
     public Integer calculateBreakEvenAmount(Promotion fixedPromotion, Promotion variablePromotion) {
