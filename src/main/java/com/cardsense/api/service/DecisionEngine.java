@@ -186,25 +186,33 @@ public class DecisionEngine {
         return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes);
     }
 
+    // Maximum promotions to consider in bitmask combination search.
+    // Keeps search cost at O(2^MAX_BITMASK_SIZE) = O(32) worst case.
+    // Candidates are pre-sorted by cappedReturn so the top value-bearing promotions
+    // are always evaluated, even when a card has more than this many eligible promotions.
+    private static final int MAX_BITMASK_SIZE = 5;
+
     private StackResolution resolveContributingPromotions(List<ScoredPromotion> promotions) {
         if (promotions.size() <= 1) {
             return new StackResolution(List.of(promotions.get(0)), List.of());
         }
-        if (promotions.size() > 15) {
-            return new StackResolution(
-                    List.of(promotions.get(0)),
-                    List.of("同卡符合條件的優惠數量過多，本次僅保守採用代表優惠，避免 stackability 組合搜尋成本過高。")
-            );
-        }
 
-        List<ScoredPromotion> bestSelection = List.of(promotions.get(0));
-        int selectionCount = 1 << promotions.size();
+        // Take at most MAX_BITMASK_SIZE highest-value promotions before the bitmask search.
+        // This preserves ranking accuracy: a card with 16 promotions still gets its best
+        // combination evaluated, rather than silently falling back to rank-#1 only.
+        List<ScoredPromotion> candidates = promotions.stream()
+                .sorted(Comparator.comparingInt(ScoredPromotion::cappedReturn).reversed())
+                .limit(MAX_BITMASK_SIZE)
+                .toList();
+
+        List<ScoredPromotion> bestSelection = List.of(candidates.get(0));
+        int selectionCount = 1 << candidates.size();
 
         for (int mask = 1; mask < selectionCount; mask++) {
             List<ScoredPromotion> selection = new ArrayList<>();
-            for (int index = 0; index < promotions.size(); index++) {
+            for (int index = 0; index < candidates.size(); index++) {
                 if ((mask & (1 << index)) != 0) {
-                    selection.add(promotions.get(index));
+                    selection.add(candidates.get(index));
                 }
             }
 

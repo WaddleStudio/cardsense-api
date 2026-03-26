@@ -354,6 +354,40 @@ public class DecisionEngineTest {
                 assertTrue(response.getRecommendations().isEmpty());
         }
 
+    @Test
+    public void testRecommendWithMoreThanFifteenPromotionsEvaluatesTopFiveNotJustFirstOne() {
+        // Build 16 promotions for the same card with increasing cashback values.
+        // Before the fix, >15 promotions silently fell back to rank-#1 only.
+        // After the fix, the top MAX_BITMASK_SIZE are evaluated and the highest-value
+        // set wins — so the result should NOT just be the first promo.
+        List<Promotion> manyPromos = new java.util.ArrayList<>();
+        for (int i = 1; i <= 16; i++) {
+            Promotion p = buildPromotion("promo" + i, "ver" + i, "CTBC_DEMO_ONLINE", "中國信託 示例網購卡",
+                    "CTBC", "中國信託", BigDecimal.valueOf(i), null, 1800, LocalDate.of(2026, 6, 30));
+            p.setStackability(stackability("ALWAYS_STACKABLE", null, null, null, null));
+            manyPromos.add(p);
+        }
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(manyPromos);
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .date(LocalDate.now())
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        // Top 5 promotions (values 16, 15, 14, 13, 12) can all stack → total = 160+150+140+130+120 = 700
+        // If only rank-#1 (value=16 → 160 NTD) was used, estimatedReturn would be 160, not 700
+        assertTrue(response.getRecommendations().get(0).getEstimatedReturn() > 160,
+                "With >15 promos, should evaluate top 5 combinations, not just rank-#1");
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)
