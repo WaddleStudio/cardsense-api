@@ -1,6 +1,7 @@
 package com.cardsense.api.controller;
 
 import com.cardsense.api.repository.PromotionRepository;
+import com.cardsense.api.repository.SupabasePromotionRepository;
 import com.cardsense.api.repository.SqlitePromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,7 +25,7 @@ public class HealthController {
     public ResponseEntity<Map<String, Object>> health() {
         Map<String, Object> result = new HashMap<>();
         result.put("status", "UP");
-        result.put("repository", promotionRepository instanceof SqlitePromotionRepository ? "sqlite" : "mock");
+        result.put("repository", repositoryMode());
 
         try {
             supabaseJdbcTemplate.queryForObject("SELECT 1", Integer.class);
@@ -34,5 +35,15 @@ public class HealthController {
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    private String repositoryMode() {
+        if (promotionRepository instanceof SupabasePromotionRepository) {
+            return "supabase";
+        }
+        if (promotionRepository instanceof SqlitePromotionRepository) {
+            return "sqlite";
+        }
+        return "mock";
     }
 }
