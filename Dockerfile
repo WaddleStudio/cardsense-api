@@ -19,6 +19,9 @@ COPY --from=build /build/target/app.jar app.jar
 COPY data/cardsense.db /app/data/cardsense.db
 
 ENV CARDSENSE_DB_PATH=/app/data/cardsense.db
+# Activate prod profile to use Supabase for promotion data.
+# Override via Railway env var (SPRING_PROFILES_ACTIVE=) if needed.
+ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
