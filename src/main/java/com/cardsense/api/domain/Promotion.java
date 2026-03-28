@@ -66,6 +66,8 @@ public class Promotion {
 
     private String recommendationScope;
 
+    private String eligibilityType;
+
     private PromotionStackability stackability;
 
     private List<PromotionCondition> conditions;

@@ -20,4 +20,6 @@ public class CardSummary {
     private String bankCode;
     private String bankName;
     private List<String> recommendationScopes;
+    private String eligibilityType;
+    private List<String> availableCategories;
 }

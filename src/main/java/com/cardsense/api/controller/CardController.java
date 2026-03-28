@@ -22,7 +22,8 @@ public class CardController {
     public ResponseEntity<List<CardSummary>> listCards(
             @RequestParam(required = false) String bank,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String scope) {
-        return ResponseEntity.ok(catalogService.listCards(bank, status, scope));
+            @RequestParam(required = false) String scope,
+            @RequestParam(required = false) String eligibilityType) {
+        return ResponseEntity.ok(catalogService.listCards(bank, status, scope, eligibilityType));
     }
 }

@@ -381,6 +381,44 @@ public class DecisionEngineTest {
                 "With >15 promos, should evaluate top 5 combinations, not just rank-#1");
     }
 
+    @Test
+    public void testRecommendExcludesNonGeneralEligibilityType() {
+        Promotion generalPromo = buildPromotion("promo1", "ver1", "CTBC_CARD", "中國信託一般卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+        generalPromo.setEligibilityType("GENERAL");
+
+        Promotion professionPromo = buildPromotion("promo2", "ver2", "CTBC_DOCTOR", "中國信託醫師卡", "CTBC", "中國信託", BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        professionPromo.setEligibilityType("PROFESSION_SPECIFIC");
+
+        Promotion businessPromo = buildPromotion("promo3", "ver3", "CTBC_BIZ", "中國信託商務卡", "CTBC", "中國信託", BigDecimal.valueOf(4.0), 400, 0, LocalDate.of(2026, 6, 30));
+        businessPromo.setEligibilityType("BUSINESS");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(generalPromo, professionPromo, businessPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
+    }
+
+    @Test
+    public void testRecommendTreatsNullEligibilityTypeAsGeneral() {
+        Promotion noTypePromo = buildPromotion("promo1", "ver1", "CTBC_CARD", "中國信託一般卡", "CTBC", "中國信託", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(noTypePromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)

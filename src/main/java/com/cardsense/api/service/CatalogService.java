@@ -21,12 +21,13 @@ public class CatalogService {
 
     private final PromotionRepository promotionRepository;
 
-    public List<CardSummary> listCards(String bank, String status, String scope) {
+    public List<CardSummary> listCards(String bank, String status, String scope, String eligibilityType) {
         return promotionsByCard().values().stream()
                 .map(this::toCardSummary)
                 .filter(card -> matchesBank(card, bank))
                 .filter(card -> matchesStatus(card.getCardStatus(), status))
                 .filter(card -> matchesScope(card, scope))
+                .filter(card -> matchesEligibilityType(card, eligibilityType))
                 .sorted(Comparator.comparing(CardSummary::getBankCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
                         .thenComparing(CardSummary::getCardCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
@@ -57,6 +58,14 @@ public class CatalogService {
                 .map(this::normalizeScope)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
 
+        List<String> categories = promotions.stream()
+                .map(Promotion::getCategory)
+                .filter(cat -> cat != null && !cat.isBlank())
+                .map(cat -> cat.trim().toUpperCase(Locale.ROOT))
+                .distinct()
+                .sorted()
+                .toList();
+
         return CardSummary.builder()
                 .cardCode(promotion.getCardCode())
                 .cardName(promotion.getCardName())
@@ -66,6 +75,8 @@ public class CatalogService {
                 .bankCode(promotion.getBankCode())
                 .bankName(promotion.getBankName())
                 .recommendationScopes(List.copyOf(scopes))
+                .eligibilityType(promotion.getEligibilityType() != null ? promotion.getEligibilityType() : "GENERAL")
+                .availableCategories(categories)
                 .build();
     }
 
@@ -115,6 +126,13 @@ public class CatalogService {
         String normalizedRequestedScope = normalizeScope(requestedScope);
         return card.getRecommendationScopes() != null
                 && card.getRecommendationScopes().stream().anyMatch(normalizedRequestedScope::equalsIgnoreCase);
+    }
+
+    private boolean matchesEligibilityType(CardSummary card, String requestedType) {
+        if (requestedType == null || requestedType.isBlank()) {
+            return true;
+        }
+        return requestedType.equalsIgnoreCase(card.getEligibilityType());
     }
 
     private String normalizeScope(String scope) {

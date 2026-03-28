@@ -91,6 +91,10 @@ public class DecisionEngine {
             return false;
         }
 
+        if (!isEligibilityTypeEligible(promotion)) {
+            return false;
+        }
+
         if (promotion.getCardStatus() != null && !"ACTIVE".equalsIgnoreCase(promotion.getCardStatus())) {
             return false;
         }
@@ -136,6 +140,13 @@ public class DecisionEngine {
         return recommendationScope == null
                 || recommendationScope.isBlank()
                 || "RECOMMENDABLE".equalsIgnoreCase(recommendationScope);
+    }
+
+    private boolean isEligibilityTypeEligible(Promotion promotion) {
+        String eligibilityType = promotion.getEligibilityType();
+        return eligibilityType == null
+                || eligibilityType.isBlank()
+                || "GENERAL".equalsIgnoreCase(eligibilityType);
     }
 
     private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {

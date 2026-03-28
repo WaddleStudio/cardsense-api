@@ -57,11 +57,11 @@ class CatalogServiceTest {
 
         when(promotionRepository.findAllPromotions()).thenReturn(List.of(activeCtbc, activeCtbcCatalog, inactiveCube));
 
-        assertEquals(1, catalogService.listCards("CTBC", "ACTIVE", null).size());
-        assertTrue(catalogService.listCards(null, "ACTIVE", null).stream()
+        assertEquals(1, catalogService.listCards("CTBC", "ACTIVE", null, null).size());
+        assertTrue(catalogService.listCards(null, "ACTIVE", null, null).stream()
                 .allMatch(card -> "ACTIVE".equals(card.getCardStatus())));
-        assertEquals(2, catalogService.listCards(null, null, "CATALOG_ONLY").size());
-        assertEquals(List.of("RECOMMENDABLE", "CATALOG_ONLY"), catalogService.listCards("CTBC", null, null).get(0).getRecommendationScopes());
+        assertEquals(2, catalogService.listCards(null, null, "CATALOG_ONLY", null).size());
+        assertEquals(List.of("RECOMMENDABLE", "CATALOG_ONLY"), catalogService.listCards("CTBC", null, null, null).get(0).getRecommendationScopes());
     }
 
     @Test
