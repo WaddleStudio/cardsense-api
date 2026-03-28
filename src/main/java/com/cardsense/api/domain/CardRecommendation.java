@@ -22,7 +22,6 @@ public class CardRecommendation {
     private BigDecimal cashbackValue;
     private Integer estimatedReturn;
     private Integer matchedPromotionCount;
-    private String rankingMode;
     private String reason;
     private String promotionId;
     private String promoVersionId;

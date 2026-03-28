@@ -1,7 +1,6 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.BenefitUsage;
-import com.cardsense.api.domain.ComparisonMode;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.PromotionStackability;
@@ -68,7 +67,6 @@ public class DecisionEngineTest {
         assertTrue(response.getRecommendations().get(1).getConditions().stream().anyMatch(condition -> "REGISTRATION_REQUIRED".equals(condition.getType())));
         assertEquals(DecisionEngine.DISCLAIMER, response.getDisclaimer());
         assertNotNull(response.getRequestId());
-                assertEquals(ComparisonMode.BEST_SINGLE_PROMOTION, response.getComparison().getMode());
                 assertEquals(1000, response.getScenario().getAmount());
     }
 
@@ -129,14 +127,12 @@ public class DecisionEngineTest {
                         .date(LocalDate.now())
                         .build())
                 .comparison(RecommendationComparisonOptions.builder()
-                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
                         .includePromotionBreakdown(true)
                         .build())
                 .build());
 
         assertEquals(1, response.getRecommendations().size());
         assertEquals(50, response.getRecommendations().get(0).getEstimatedReturn());
-        assertEquals("STACK_ALL_ELIGIBLE", response.getRecommendations().get(0).getRankingMode());
         assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().size());
         assertEquals(1, response.getRecommendations().get(0).getPromotionBreakdown().stream().filter(item -> Boolean.TRUE.equals(item.getContributesToCardTotal())).count());
     }
@@ -160,7 +156,6 @@ public class DecisionEngineTest {
                         .date(LocalDate.now())
                         .build())
                 .comparison(RecommendationComparisonOptions.builder()
-                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
                         .includePromotionBreakdown(true)
                         .build())
                 .build());
@@ -192,7 +187,6 @@ public class DecisionEngineTest {
                         .date(LocalDate.now())
                         .build())
                 .comparison(RecommendationComparisonOptions.builder()
-                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
                         .includePromotionBreakdown(true)
                         .build())
                 .build());
@@ -377,7 +371,6 @@ public class DecisionEngineTest {
                         .date(LocalDate.now())
                         .build())
                 .comparison(RecommendationComparisonOptions.builder()
-                        .mode(ComparisonMode.STACK_ALL_ELIGIBLE)
                         .build())
                 .build());
 

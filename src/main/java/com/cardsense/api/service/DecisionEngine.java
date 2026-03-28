@@ -3,7 +3,6 @@ package com.cardsense.api.service;
 import com.cardsense.api.domain.BenefitUsage;
 import com.cardsense.api.domain.BreakEvenAnalysis;
 import com.cardsense.api.domain.CardRecommendation;
-import com.cardsense.api.domain.ComparisonMode;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.PromotionRewardBreakdown;
@@ -41,7 +40,6 @@ public class DecisionEngine {
     public RecommendationResponse recommend(RecommendationRequest request) {
         RecommendationScenario resolvedScenario = request.toResolvedScenario();
         LocalDate requestDate = resolvedScenario.getDate() != null ? resolvedScenario.getDate() : LocalDate.now();
-        ComparisonMode comparisonMode = request.getResolvedComparisonMode();
 
         List<Promotion> activePromotions = promotionRepository.findActivePromotions(requestDate);
         Comparator<ScoredPromotion> promotionComparator = recommendationComparator();
@@ -56,13 +54,13 @@ public class DecisionEngine {
         List<CardAggregate> rankedCards = scoredPromotions.stream()
                 .collect(Collectors.groupingBy(this::distinctCardKey, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
-                .map(promotions -> toCardAggregate(promotions, comparisonMode))
+                .map(this::toCardAggregate)
                 .sorted(cardAggregateComparator())
                 .toList();
 
         List<CardRecommendation> recommendations = rankedCards.stream()
                 .limit(request.getResolvedMaxResults())
-                .map(cardAggregate -> toRecommendation(cardAggregate, comparisonMode, request.shouldIncludePromotionBreakdown()))
+                .map(cardAggregate -> toRecommendation(cardAggregate, request.shouldIncludePromotionBreakdown()))
                 .toList();
 
         List<BreakEvenAnalysis> breakEvenAnalyses = request.shouldIncludeBreakEvenAnalysis()
@@ -72,7 +70,7 @@ public class DecisionEngine {
         return RecommendationResponse.builder()
                 .requestId(java.util.UUID.randomUUID().toString())
                 .scenario(resolvedScenario)
-                .comparison(buildComparisonSummary(comparisonMode, activePromotions.size(), scoredPromotions.size(), rankedCards.size(), breakEvenAnalyses))
+                .comparison(buildComparisonSummary(activePromotions.size(), scoredPromotions.size(), rankedCards.size(), breakEvenAnalyses))
                 .recommendations(recommendations)
                 .generatedAt(LocalDateTime.now())
                 .disclaimer(DISCLAIMER)
@@ -169,16 +167,11 @@ public class DecisionEngine {
                 .thenComparing(cardAggregate -> cardAggregate.primaryPromotion().getPromoVersionId(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
     }
 
-    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions, ComparisonMode comparisonMode) {
+    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions) {
         List<String> notes = new ArrayList<>();
-        List<ScoredPromotion> contributingPromotions;
-        if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE) {
-            StackResolution resolution = resolveContributingPromotions(promotions);
-            contributingPromotions = resolution.contributingPromotions();
-            notes.addAll(resolution.notes());
-        } else {
-            contributingPromotions = List.of(promotions.get(0));
-        }
+        StackResolution resolution = resolveContributingPromotions(promotions);
+        List<ScoredPromotion> contributingPromotions = resolution.contributingPromotions();
+        notes.addAll(resolution.notes());
 
         ScoredPromotion primary = contributingPromotions.get(0);
         int totalReturn = contributingPromotions.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
@@ -376,13 +369,13 @@ public class DecisionEngine {
         return value == null ? "" : value.trim().toUpperCase();
     }
 
-    private CardRecommendation toRecommendation(CardAggregate cardAggregate, ComparisonMode comparisonMode, boolean includePromotionBreakdown) {
+    private CardRecommendation toRecommendation(CardAggregate cardAggregate, boolean includePromotionBreakdown) {
         Promotion promotion = cardAggregate.primaryPromotion();
         List<PromotionCondition> recommendationConditions = buildRecommendationConditions(promotion);
         String cashbackValueText = promotion.getCashbackValue() == null
                 ? "0"
                 : promotion.getCashbackValue().stripTrailingZeros().toPlainString();
-        String reason = comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE && cardAggregate.allEligiblePromotions().size() > 1
+        String reason = cardAggregate.contributingPromotions().size() > 1
                 ? String.format(
                 "%s %s — %d 個可命中的優惠合計預估回饋 $%d 元；代表優惠為 %s%s，優惠至 %s",
                 promotion.getBankName(),
@@ -403,7 +396,7 @@ public class DecisionEngine {
                 promotion.getValidUntil());
 
         List<PromotionRewardBreakdown> breakdown = includePromotionBreakdown
-                ? buildPromotionBreakdown(cardAggregate, comparisonMode)
+                ? buildPromotionBreakdown(cardAggregate)
                 : List.of();
 
         return CardRecommendation.builder()
@@ -415,7 +408,6 @@ public class DecisionEngine {
                 .cashbackValue(promotion.getCashbackValue())
                 .estimatedReturn(cardAggregate.totalReturn())
                 .matchedPromotionCount(cardAggregate.allEligiblePromotions().size())
-                .rankingMode(comparisonMode.name())
                 .reason(reason)
                 .promotionId(promotion.getPromoId())
                 .promoVersionId(promotion.getPromoVersionId())
@@ -426,7 +418,7 @@ public class DecisionEngine {
                 .build();
     }
 
-    private List<PromotionRewardBreakdown> buildPromotionBreakdown(CardAggregate cardAggregate, ComparisonMode comparisonMode) {
+    private List<PromotionRewardBreakdown> buildPromotionBreakdown(CardAggregate cardAggregate) {
         return cardAggregate.allEligiblePromotions().stream()
                 .map(scoredPromotion -> {
                     Promotion promotion = scoredPromotion.promotion();
@@ -443,7 +435,7 @@ public class DecisionEngine {
                                 .assumedStackable(false)
                             .validUntil(promotion.getValidUntil())
                             .conditions(buildRecommendationConditions(promotion))
-                                .reason(buildBreakdownReason(cardAggregate, comparisonMode, scoredPromotion, contributes))
+                                .reason(buildBreakdownReason(cardAggregate, scoredPromotion, contributes))
                             .build();
                 })
                 .toList();
@@ -451,11 +443,10 @@ public class DecisionEngine {
 
                     private String buildBreakdownReason(
                         CardAggregate cardAggregate,
-                        ComparisonMode comparisonMode,
                         ScoredPromotion scoredPromotion,
                         boolean contributes
                     ) {
-                    if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE && cardAggregate.contributingPromotions().size() > 1) {
+                    if (cardAggregate.contributingPromotions().size() > 1) {
                         return contributes
                             ? "依 stackability metadata 判定可計入卡片總回饋。"
                             : "未納入卡片總回饋：缺少 stackability metadata、未滿足 requires 條件，或與已選優惠互斥。";
@@ -608,22 +599,19 @@ public class DecisionEngine {
     }
 
     private RecommendationComparisonSummary buildComparisonSummary(
-            ComparisonMode comparisonMode,
             int evaluatedPromotionCount,
             int eligiblePromotionCount,
             int rankedCardCount,
             List<BreakEvenAnalysis> breakEvenAnalyses
     ) {
         List<String> notes = new ArrayList<>();
-        if (comparisonMode == ComparisonMode.STACK_ALL_ELIGIBLE) {
-            notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
-        }
+        notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
         if (breakEvenAnalyses.isEmpty()) {
             notes.add("本次比較沒有可計算的 FIXED vs PERCENT/POINTS break-even pair，或呼叫端未要求輸出 break-even 分析。");
         }
 
         return RecommendationComparisonSummary.builder()
-                .mode(comparisonMode)
+                .mode("STACK_ALL_ELIGIBLE")
                 .evaluatedPromotionCount(evaluatedPromotionCount)
                 .eligiblePromotionCount(eligiblePromotionCount)
                 .rankedCardCount(rankedCardCount)

@@ -12,7 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class RecommendationComparisonOptions {
-    private ComparisonMode mode;
     private Boolean includePromotionBreakdown;
     private Boolean includeBreakEvenAnalysis;
     private Integer maxResults;

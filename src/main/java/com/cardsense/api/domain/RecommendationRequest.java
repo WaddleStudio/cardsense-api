@@ -89,14 +89,6 @@ public class RecommendationRequest {
     }
 
     @JsonIgnore
-    public ComparisonMode getResolvedComparisonMode() {
-        if (comparison == null || comparison.getMode() == null) {
-            return ComparisonMode.BEST_SINGLE_PROMOTION;
-        }
-        return comparison.getMode();
-    }
-
-    @JsonIgnore
     public boolean shouldIncludePromotionBreakdown() {
         return comparison == null || comparison.getIncludePromotionBreakdown() == null || comparison.getIncludePromotionBreakdown();
     }

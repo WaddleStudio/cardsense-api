@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class RecommendationComparisonSummary {
-    private ComparisonMode mode;
+    private String mode;
     private Integer evaluatedPromotionCount;
     private Integer eligiblePromotionCount;
     private Integer rankedCardCount;
