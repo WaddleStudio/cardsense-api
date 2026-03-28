@@ -68,6 +68,11 @@ public class RecommendationRequest {
     }
 
     @JsonIgnore
+    public String getResolvedMerchantName() {
+        return scenario != null ? scenario.getMerchantName() : null;
+    }
+
+    @JsonIgnore
     public RecommendationScenario toResolvedScenario() {
         RecommendationScenario baseScenario = scenario == null ? new RecommendationScenario() : scenario;
         return RecommendationScenario.builder()

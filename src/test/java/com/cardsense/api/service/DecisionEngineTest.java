@@ -419,6 +419,58 @@ public class DecisionEngineTest {
         assertEquals(1, response.getRecommendations().size());
     }
 
+    @Test
+    public void testRecommendMatchesEcommercePlatformCondition() {
+        Promotion momoPromo = buildPromotion("promo1", "ver1", "CTBC_CARD", "中國信託卡", "CTBC", "中國信託", BigDecimal.valueOf(5.0), 500, 1800, LocalDate.of(2026, 6, 30));
+        momoPromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "MOMO", "momo 限定")));
+
+        Promotion generalPromo = buildPromotion("promo2", "ver2", "CATHAY_CARD", "國泰卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), 300, 1800, LocalDate.of(2026, 6, 30));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(momoPromo, generalPromo));
+
+        // With merchantName=MOMO, both should match
+        RecommendationResponse withMerchant = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .merchantName("MOMO")
+                        .date(LocalDate.now())
+                        .build())
+                .build());
+
+        assertEquals(2, withMerchant.getRecommendations().size());
+        assertEquals("promo1", withMerchant.getRecommendations().get(0).getPromotionId());
+
+        // Without merchantName, platform-specific promo excluded
+        RecommendationResponse withoutMerchant = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, withoutMerchant.getRecommendations().size());
+        assertEquals("promo2", withoutMerchant.getRecommendations().get(0).getPromotionId());
+    }
+
+    @Test
+    public void testRecommendExcludesMismatchedPlatformCondition() {
+        Promotion shopeePromo = buildPromotion("promo1", "ver1", "CTBC_CARD", "中國信託卡", "CTBC", "中國信託", BigDecimal.valueOf(5.0), 500, 1800, LocalDate.of(2026, 6, 30));
+        shopeePromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "SHOPEE", "蝦皮限定")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(shopeePromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .merchantName("MOMO")
+                        .date(LocalDate.now())
+                        .build())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)

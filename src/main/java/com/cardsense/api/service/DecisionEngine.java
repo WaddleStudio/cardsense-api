@@ -34,6 +34,10 @@ public class DecisionEngine {
 
     public static final String DISCLAIMER = "CardSense 提供信用卡優惠比較資訊，不構成金融建議。實際回饋依各銀行公告為準，請以銀行官網資訊為最終依據。";
 
+    private static final Set<String> PLATFORM_CONDITION_TYPES = Set.of(
+            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "PAYMENT_PLATFORM"
+    );
+
     private final PromotionRepository promotionRepository;
     private final RewardCalculator rewardCalculator;
 
@@ -121,6 +125,10 @@ public class DecisionEngine {
         }
 
         if (!matchesLocation(promotion, location)) {
+            return false;
+        }
+
+        if (!matchesPlatformConditions(promotion, request)) {
             return false;
         }
 
@@ -501,6 +509,32 @@ public class DecisionEngine {
         }
 
         return locationOnlyTokens.stream().anyMatch(normalizedLocation::contains);
+    }
+
+    private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
+        List<PromotionCondition> conditions = promotion.getConditions();
+        if (conditions == null || conditions.isEmpty()) {
+            return true;
+        }
+
+        List<String> platformValues = conditions.stream()
+                .filter(c -> PLATFORM_CONDITION_TYPES.contains(normalizeValue(c.getType())))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
+                .filter(v -> !v.isBlank())
+                .toList();
+
+        if (platformValues.isEmpty()) {
+            return true;
+        }
+
+        String merchantName = request.getResolvedMerchantName();
+        if (merchantName == null || merchantName.isBlank()) {
+            return false;
+        }
+
+        String normalizedMerchant = normalizeValue(merchantName);
+        return platformValues.stream().anyMatch(normalizedMerchant::equals);
     }
 
     private boolean matchesExcludedConditions(Promotion promotion, RecommendationRequest request) {
