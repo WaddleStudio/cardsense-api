@@ -41,6 +41,7 @@ class SqlitePromotionRepositoryTest {
                         frequency_limit TEXT,
                         requires_registration INTEGER NOT NULL DEFAULT 0,
                         recommendation_scope TEXT NOT NULL DEFAULT 'RECOMMENDABLE',
+                        eligibility_type TEXT NOT NULL DEFAULT 'GENERAL',
                         valid_from TEXT NOT NULL,
                         valid_until TEXT NOT NULL,
                         conditions_json TEXT NOT NULL,
@@ -60,13 +61,13 @@ class SqlitePromotionRepositoryTest {
                     INSERT INTO promotion_current (
                         promo_id, promo_version_id, title, bank_code, bank_name, card_code, card_name, card_status,
                         annual_fee, apply_url, category, channel, cashback_type, cashback_value, min_amount,
-                        max_cashback, frequency_limit, requires_registration, recommendation_scope, valid_from, valid_until,
+                        max_cashback, frequency_limit, requires_registration, recommendation_scope, eligibility_type, valid_from, valid_until,
                         conditions_json, excluded_conditions_json, source_url, raw_text_hash, summary,
                         extractor_version, extracted_at, confidence, status, raw_payload_json
                     ) VALUES (
                         'promo-1', 'version-1', '玉山熊本熊卡 日本一般消費', 'ESUN', '玉山銀行', 'ESUN_CARD', '玉山熊本熊卡', 'ACTIVE',
                         3000, 'https://example.com/apply', 'OVERSEAS', 'ONLINE', 'PERCENT', 10.0, 0,
-                        500, 'MONTHLY', 1, 'RECOMMENDABLE', '2026-01-01', '2026-12-31',
+                        500, 'MONTHLY', 1, 'RECOMMENDABLE', 'GENERAL', '2026-01-01', '2026-12-31',
                         '[{"type":"TEXT","value":"JP","label":"日本適用"}]', '[]', 'https://example.com/source', 'hash', 'summary',
                             'extractor-0.2.0', '2026-03-19T00:00:00Z', 1.0, 'ACTIVE', '{"stackability":{"benefitLayer":"BASE","relationshipMode":"ALWAYS_STACKABLE","groupId":"esun-overseas","priority":100,"requiresPromoVersionIds":[],"excludesPromoVersionIds":[],"stackWithPromoVersionIds":[],"notes":"base reward"}}'
                     )
