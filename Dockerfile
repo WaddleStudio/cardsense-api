@@ -15,13 +15,8 @@ WORKDIR /app
 
 COPY --from=build /build/target/app.jar app.jar
 
-# Bake SQLite DB into image (place cardsense.db in project root before building)
-COPY data/cardsense.db /app/data/cardsense.db
-
-ENV CARDSENSE_DB_PATH=/app/data/cardsense.db
-# Activate prod profile to use Supabase for promotion data.
-# Override via Railway env var (SPRING_PROFILES_ACTIVE=) if needed.
 ENV SPRING_PROFILES_ACTIVE=prod
-EXPOSE 8080
+ENV PORT=8080
+EXPOSE ${PORT}
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT} -jar app.jar"]
