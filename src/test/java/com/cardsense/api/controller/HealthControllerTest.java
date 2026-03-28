@@ -1,7 +1,6 @@
 package com.cardsense.api.controller;
 
 import com.cardsense.api.repository.MockPromotionRepository;
-import com.cardsense.api.repository.PromotionRepository;
 import com.cardsense.api.repository.SqlitePromotionRepository;
 import com.cardsense.api.repository.SupabasePromotionRepository;
 import org.junit.jupiter.api.Test;
