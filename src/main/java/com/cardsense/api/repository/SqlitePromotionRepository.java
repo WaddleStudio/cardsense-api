@@ -82,6 +82,13 @@ public class SqlitePromotionRepository implements PromotionRepository {
         }
     }
 
+    @Override
+    public List<Promotion> findPromotionsByCardCode(String cardCode, LocalDate date) {
+        return findActivePromotions(date).stream()
+                .filter(p -> cardCode.equalsIgnoreCase(p.getCardCode()))
+                .toList();
+    }
+
     private Connection openConnection() throws SQLException {
         String jdbcUrl = dbPath.startsWith("jdbc:sqlite:") ? dbPath : "jdbc:sqlite:" + dbPath;
         return DriverManager.getConnection(jdbcUrl);

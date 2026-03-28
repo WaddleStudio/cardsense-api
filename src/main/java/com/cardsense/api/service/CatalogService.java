@@ -7,6 +7,7 @@ import com.cardsense.api.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
@@ -31,6 +32,10 @@ public class CatalogService {
                 .sorted(Comparator.comparing(CardSummary::getBankCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
                         .thenComparing(CardSummary::getCardCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
                 .toList();
+    }
+
+    public List<Promotion> listCardPromotions(String cardCode) {
+        return promotionRepository.findPromotionsByCardCode(cardCode, LocalDate.now());
     }
 
     public List<BankSummary> listBanks() {

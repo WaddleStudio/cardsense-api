@@ -52,4 +52,11 @@ public class MockPromotionRepository implements PromotionRepository {
     public List<Promotion> findAllPromotions() {
         return List.copyOf(promotions);
     }
+
+    @Override
+    public List<Promotion> findPromotionsByCardCode(String cardCode, LocalDate date) {
+        return findActivePromotions(date).stream()
+                .filter(p -> cardCode.equalsIgnoreCase(p.getCardCode()))
+                .toList();
+    }
 }

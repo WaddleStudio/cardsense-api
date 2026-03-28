@@ -9,4 +9,6 @@ public interface PromotionRepository {
     List<Promotion> findActivePromotions(LocalDate date);
 
     List<Promotion> findAllPromotions();
+
+    List<Promotion> findPromotionsByCardCode(String cardCode, LocalDate date);
 }

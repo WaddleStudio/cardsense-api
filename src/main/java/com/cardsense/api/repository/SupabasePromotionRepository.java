@@ -64,6 +64,13 @@ public class SupabasePromotionRepository implements PromotionRepository {
         return jdbc.query(sql, rowMapper());
     }
 
+    @Override
+    public List<Promotion> findPromotionsByCardCode(String cardCode, LocalDate date) {
+        return findActivePromotions(date).stream()
+                .filter(p -> cardCode.equalsIgnoreCase(p.getCardCode()))
+                .toList();
+    }
+
     private RowMapper<Promotion> rowMapper() {
         return (rs, rowNum) -> mapPromotion(rs);
     }
