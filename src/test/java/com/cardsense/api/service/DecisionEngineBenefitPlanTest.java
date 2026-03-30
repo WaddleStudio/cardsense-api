@@ -1,0 +1,208 @@
+package com.cardsense.api.service;
+
+import com.cardsense.api.domain.ActivePlan;
+import com.cardsense.api.domain.BenefitPlan;
+import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
+import com.cardsense.api.domain.RecommendationRequest;
+import com.cardsense.api.domain.RecommendationResponse;
+import com.cardsense.api.domain.RecommendationScenario;
+import com.cardsense.api.domain.RecommendationComparisonOptions;
+import com.cardsense.api.repository.BenefitPlanRepository;
+import com.cardsense.api.repository.PromotionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+public class DecisionEngineBenefitPlanTest {
+
+    private PromotionRepository promotionRepository;
+    private BenefitPlanRepository benefitPlanRepository;
+    private RewardCalculator rewardCalculator;
+    private DecisionEngine decisionEngine;
+
+    @BeforeEach
+    public void setup() {
+        promotionRepository = Mockito.mock(PromotionRepository.class);
+        benefitPlanRepository = Mockito.mock(BenefitPlanRepository.class);
+        rewardCalculator = new RewardCalculator();
+        decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator, benefitPlanRepository);
+    }
+
+    @Test
+    public void testRecommendPicksBestPlanForSwitchingCard() {
+        // CUBE card: base promo (no plan) + digital plan promo (蝦皮 3%) + shopping plan promo (SOGO 3%)
+        Promotion basePromo = buildPromotion("base1", "base_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
+                BigDecimal.valueOf(0.3), null, 0, LocalDate.of(2026, 6, 30));
+        basePromo.setPlanId(null);
+
+        Promotion shopeePromo = buildPromotion("digital1", "digital_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        shopeePromo.setPlanId("CATHAY_CUBE_DIGITAL");
+        shopeePromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "SHOPEE", "蝦皮")));
+
+        Promotion sogoPromo = buildPromotion("shopping1", "shopping_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        sogoPromo.setPlanId("CATHAY_CUBE_SHOPPING");
+        sogoPromo.setConditions(List.of(condition("RETAIL_CHAIN", "SOGO", "SOGO")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(basePromo, shopeePromo, sogoPromo));
+
+        BenefitPlan digitalPlan = BenefitPlan.builder()
+                .planId("CATHAY_CUBE_DIGITAL").cardCode("CATHAY_CUBE").planName("玩數位")
+                .switchFrequency("DAILY").exclusiveGroup("CATHAY_CUBE_PLANS")
+                .status("ACTIVE").validFrom(LocalDate.of(2026, 1, 1)).validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+        BenefitPlan shoppingPlan = BenefitPlan.builder()
+                .planId("CATHAY_CUBE_SHOPPING").cardCode("CATHAY_CUBE").planName("樂饗購")
+                .switchFrequency("DAILY").exclusiveGroup("CATHAY_CUBE_PLANS")
+                .status("ACTIVE").validFrom(LocalDate.of(2026, 1, 1)).validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(digitalPlan);
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_SHOPPING")).thenReturn(shoppingPlan);
+
+        // Query: 蝦皮消費 3000 元 → digital plan should win (shopee matches, 3% = 90元)
+        // shopping plan's SOGO promo doesn't match merchantName=SHOPEE so it's filtered by isEligible
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(3000)
+                        .category("ONLINE")
+                        .merchantName("SHOPEE")
+                        .date(LocalDate.of(2026, 3, 15))
+                        .build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .includePromotionBreakdown(true)
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertEquals("CATHAY_CUBE", rec.getCardCode());
+
+        // activePlan should be the digital plan
+        assertNotNull(rec.getActivePlan());
+        assertEquals("CATHAY_CUBE_DIGITAL", rec.getActivePlan().getPlanId());
+        assertEquals("玩數位", rec.getActivePlan().getPlanName());
+        assertTrue(rec.getActivePlan().isSwitchRequired());
+        assertEquals("每天可切換1次", rec.getActivePlan().getSwitchFrequency());
+
+        // Total should be base (0.3% of 3000 = 9) + digital (3% of 3000 = 90) = at least 90
+        assertTrue(rec.getEstimatedReturn() >= 90);
+    }
+
+    @Test
+    public void testTraditionalCardHasNullActivePlan() {
+        Promotion traditionalPromo = buildPromotion("trad1", "trad_ver1", "CTBC_DEMO", "中信卡", "CTBC", "中國信託",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        traditionalPromo.setPlanId(null);
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(traditionalPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 15)).build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertNull(response.getRecommendations().get(0).getActivePlan());
+    }
+
+    @Test
+    public void testPlanPromotionsFromNonWinningPlansAreExcluded() {
+        // Two plan-bound promos from different plans, same card, same category.
+        Promotion digitalPromo = buildPromotion("d1", "d_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        digitalPromo.setPlanId("CATHAY_CUBE_DIGITAL");
+
+        Promotion essentialsPromo = buildPromotion("e1", "e_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
+                BigDecimal.valueOf(2.0), 500, 0, LocalDate.of(2026, 6, 30));
+        essentialsPromo.setPlanId("CATHAY_CUBE_ESSENTIALS");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(digitalPromo, essentialsPromo));
+
+        BenefitPlan digitalPlan = BenefitPlan.builder()
+                .planId("CATHAY_CUBE_DIGITAL").cardCode("CATHAY_CUBE").planName("玩數位")
+                .switchFrequency("DAILY").exclusiveGroup("CATHAY_CUBE_PLANS")
+                .status("ACTIVE").validFrom(LocalDate.of(2026, 1, 1)).validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+        BenefitPlan essentialsPlan = BenefitPlan.builder()
+                .planId("CATHAY_CUBE_ESSENTIALS").cardCode("CATHAY_CUBE").planName("集精選")
+                .switchFrequency("DAILY").exclusiveGroup("CATHAY_CUBE_PLANS")
+                .status("ACTIVE").validFrom(LocalDate.of(2026, 1, 1)).validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(digitalPlan);
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_ESSENTIALS")).thenReturn(essentialsPlan);
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 15)).build())
+                .comparison(RecommendationComparisonOptions.builder()
+                        .includePromotionBreakdown(true).build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        // Digital plan (3%) beats essentials plan (2%)
+        assertEquals("CATHAY_CUBE_DIGITAL", rec.getActivePlan().getPlanId());
+        assertEquals(30, rec.getEstimatedReturn()); // 3% of 1000
+    }
+
+    @Test
+    public void testMonthlyPlanShowsCorrectSwitchFrequency() {
+        Promotion unicardPromo = buildPromotion("u1", "u_ver1", "ESUN_UNICARD", "Unicard", "ESUN", "玉山銀行",
+                BigDecimal.valueOf(4.5), 500, 0, LocalDate.of(2026, 6, 30));
+        unicardPromo.setPlanId("ESUN_UNICARD_UP");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(unicardPromo));
+
+        BenefitPlan upPlan = BenefitPlan.builder()
+                .planId("ESUN_UNICARD_UP").cardCode("ESUN_UNICARD").planName("UP選")
+                .switchFrequency("MONTHLY").switchMaxPerMonth(30).exclusiveGroup("ESUN_UNICARD_PLANS")
+                .status("ACTIVE").validFrom(LocalDate.of(2026, 1, 1)).validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+        when(benefitPlanRepository.findByPlanId("ESUN_UNICARD_UP")).thenReturn(upPlan);
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 15)).build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNotNull(rec.getActivePlan());
+        assertEquals("每月最多切換30次", rec.getActivePlan().getSwitchFrequency());
+    }
+
+    private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName,
+                                      String bankCode, String bankName, BigDecimal cashbackValue,
+                                      Integer maxCashback, Integer annualFee, LocalDate validUntil) {
+        return Promotion.builder()
+                .promoId(promoId)
+                .promoVersionId(promoVersionId)
+                .cardCode(cardCode)
+                .cardName(cardName)
+                .bankCode(bankCode)
+                .bankName(bankName)
+                .category("ONLINE")
+                .recommendationScope("RECOMMENDABLE")
+                .cashbackType("PERCENT")
+                .cashbackValue(cashbackValue)
+                .maxCashback(maxCashback)
+                .annualFee(annualFee)
+                .cardStatus("ACTIVE")
+                .validUntil(validUntil)
+                .status("ACTIVE")
+                .build();
+    }
+
+    private PromotionCondition condition(String type, String value, String label) {
+        return PromotionCondition.builder().type(type).value(value).label(label).build();
+    }
+}

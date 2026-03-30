@@ -1,5 +1,7 @@
 package com.cardsense.api.service;
 
+import com.cardsense.api.domain.ActivePlan;
+import com.cardsense.api.domain.BenefitPlan;
 import com.cardsense.api.domain.BenefitUsage;
 import com.cardsense.api.domain.BreakEvenAnalysis;
 import com.cardsense.api.domain.CardRecommendation;
@@ -12,6 +14,7 @@ import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
 import com.cardsense.api.domain.RecommendationScenario;
 import com.cardsense.api.domain.ScoredPromotion;
+import com.cardsense.api.repository.BenefitPlanRepository;
 import com.cardsense.api.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,7 @@ public class DecisionEngine {
 
     private final PromotionRepository promotionRepository;
     private final RewardCalculator rewardCalculator;
+    private final BenefitPlanRepository benefitPlanRepository;
 
     public RecommendationResponse recommend(RecommendationRequest request) {
         RecommendationScenario resolvedScenario = request.toResolvedScenario();
@@ -188,15 +192,89 @@ public class DecisionEngine {
 
     private CardAggregate toCardAggregate(List<ScoredPromotion> promotions) {
         List<String> notes = new ArrayList<>();
-        StackResolution resolution = resolveContributingPromotions(promotions);
+
+        // Resolve best plan before stack resolution
+        PlanResolution planResolution = resolveBestPlan(promotions);
+        List<ScoredPromotion> effectivePromotions = planResolution.promotions();
+
+        StackResolution resolution = resolveContributingPromotions(effectivePromotions);
         List<ScoredPromotion> contributingPromotions = resolution.contributingPromotions();
         notes.addAll(resolution.notes());
+
+        if (planResolution.winningPlan() != null) {
+            notes.add(String.format("推薦切換至「%s」方案以獲得最高回饋。", planResolution.winningPlan().getPlanName()));
+        }
 
         ScoredPromotion primary = contributingPromotions.get(0);
         int totalReturn = contributingPromotions.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
 
-        return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes);
+        return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes, planResolution.winningPlan());
     }
+
+    private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions) {
+        List<ScoredPromotion> traditional = promotions.stream()
+                .filter(sp -> sp.promotion().getPlanId() == null || sp.promotion().getPlanId().isBlank())
+                .toList();
+
+        List<ScoredPromotion> planBound = promotions.stream()
+                .filter(sp -> sp.promotion().getPlanId() != null && !sp.promotion().getPlanId().isBlank())
+                .toList();
+
+        if (planBound.isEmpty()) {
+            return new PlanResolution(promotions, null);
+        }
+
+        // Group plan-bound promotions by exclusiveGroup, then by planId within each group
+        // Pick the planId with the highest total return per exclusive group
+        record PlanGroup(String exclusiveGroup, String planId, List<ScoredPromotion> promotions, int totalReturn) {}
+
+        java.util.Map<String, List<PlanGroup>> groupsByExclusive = planBound.stream()
+                .collect(Collectors.groupingBy(sp -> {
+                    BenefitPlan plan = benefitPlanRepository.findByPlanId(sp.promotion().getPlanId());
+                    return plan != null ? plan.getExclusiveGroup() : "__NONE__";
+                }))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        java.util.Map.Entry::getKey,
+                        entry -> entry.getValue().stream()
+                                .collect(Collectors.groupingBy(sp -> normalizeValue(sp.promotion().getPlanId())))
+                                .entrySet().stream()
+                                .map(planEntry -> new PlanGroup(
+                                        entry.getKey(),
+                                        planEntry.getKey(),
+                                        planEntry.getValue(),
+                                        planEntry.getValue().stream().mapToInt(ScoredPromotion::cappedReturn).sum()))
+                                .toList()
+                ));
+
+        List<ScoredPromotion> winningPlanPromotions = new ArrayList<>();
+        BenefitPlan winningPlan = null;
+
+        for (var entry : groupsByExclusive.entrySet()) {
+            List<PlanGroup> planGroups = entry.getValue();
+            PlanGroup best = planGroups.stream()
+                    .max(Comparator.comparingInt(PlanGroup::totalReturn))
+                    .orElse(null);
+            if (best != null) {
+                winningPlanPromotions.addAll(best.promotions());
+                String originalPlanId = best.promotions().get(0).promotion().getPlanId();
+                BenefitPlan candidate = benefitPlanRepository.findByPlanId(originalPlanId);
+                if (candidate != null && (winningPlan == null || best.totalReturn() > 0)) {
+                    winningPlan = candidate;
+                }
+            }
+        }
+
+        List<ScoredPromotion> combined = new ArrayList<>(traditional);
+        combined.addAll(winningPlanPromotions);
+
+        return new PlanResolution(combined, winningPlan);
+    }
+
+    private record PlanResolution(
+            List<ScoredPromotion> promotions,
+            BenefitPlan winningPlan
+    ) {}
 
     // Maximum promotions to consider in bitmask combination search.
     // Keeps search cost at O(2^MAX_BITMASK_SIZE) = O(32) worst case.
@@ -434,6 +512,27 @@ public class DecisionEngine {
                 .conditions(recommendationConditions)
                 .promotionBreakdown(breakdown)
                 .applyUrl(promotion.getApplyUrl())
+                .activePlan(buildActivePlan(cardAggregate.winningPlan()))
+                .build();
+    }
+
+    private ActivePlan buildActivePlan(BenefitPlan plan) {
+        if (plan == null) {
+            return null;
+        }
+        String frequencyText = switch (plan.getSwitchFrequency().toUpperCase()) {
+            case "DAILY" -> "每天可切換1次";
+            case "MONTHLY" -> plan.getSwitchMaxPerMonth() != null
+                    ? String.format("每月最多切換%d次", plan.getSwitchMaxPerMonth())
+                    : "每月可切換";
+            case "UNLIMITED" -> "不限次數";
+            default -> plan.getSwitchFrequency();
+        };
+        return ActivePlan.builder()
+                .planId(plan.getPlanId())
+                .planName(plan.getPlanName())
+                .switchRequired(true)
+                .switchFrequency(frequencyText)
                 .build();
     }
 
@@ -749,7 +848,8 @@ public class DecisionEngine {
             List<ScoredPromotion> allEligiblePromotions,
             List<ScoredPromotion> contributingPromotions,
             int totalReturn,
-            List<String> notes
+            List<String> notes,
+            BenefitPlan winningPlan
     ) {
     }
 

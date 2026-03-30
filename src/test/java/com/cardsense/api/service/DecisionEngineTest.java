@@ -8,6 +8,7 @@ import com.cardsense.api.domain.RecommendationComparisonOptions;
 import com.cardsense.api.domain.RecommendationRequest;
 import com.cardsense.api.domain.RecommendationResponse;
 import com.cardsense.api.domain.RecommendationScenario;
+import com.cardsense.api.repository.BenefitPlanRepository;
 import com.cardsense.api.repository.PromotionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,8 @@ public class DecisionEngineTest {
     public void setup() {
         promotionRepository = Mockito.mock(PromotionRepository.class);
         rewardCalculator = new RewardCalculator();
-        decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator);
+        BenefitPlanRepository benefitPlanRepository = Mockito.mock(BenefitPlanRepository.class);
+        decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator, benefitPlanRepository);
     }
 
     @Test
