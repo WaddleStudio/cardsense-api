@@ -1,7 +1,9 @@
 package com.cardsense.api.controller;
 
+import com.cardsense.api.domain.BenefitPlan;
 import com.cardsense.api.domain.CardSummary;
 import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.repository.BenefitPlanRepository;
 import com.cardsense.api.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import java.util.List;
 public class CardController {
 
     private final CatalogService catalogService;
+    private final BenefitPlanRepository benefitPlanRepository;
 
     @GetMapping
     public ResponseEntity<List<CardSummary>> listCards(
@@ -33,5 +36,11 @@ public class CardController {
     public ResponseEntity<List<Promotion>> listCardPromotions(@PathVariable String cardCode) {
         List<Promotion> promotions = catalogService.listCardPromotions(cardCode);
         return ResponseEntity.ok(promotions);
+    }
+
+    @GetMapping("/{cardCode}/plans")
+    public ResponseEntity<List<BenefitPlan>> listCardPlans(@PathVariable String cardCode) {
+        List<BenefitPlan> plans = benefitPlanRepository.findByCardCode(cardCode);
+        return ResponseEntity.ok(plans);
     }
 }
