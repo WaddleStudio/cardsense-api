@@ -29,4 +29,5 @@ public class CardRecommendation {
     private List<PromotionCondition> conditions;
     private List<PromotionRewardBreakdown> promotionBreakdown;
     private String applyUrl;
+    private ActivePlan activePlan;
 }

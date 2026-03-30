@@ -76,4 +76,6 @@ public class Promotion {
     private List<PromotionCondition> excludedConditions;
 
     private String status;
+
+    private String planId;
 }
