@@ -1,7 +1,7 @@
 $kind: http-request
-url: "{{baseUrl}}/v1/cards?bank=CATHAY&scope=CATALOG_ONLY"
+name: Catalog Only Cards
+url: "{{baseUrl}}/v1/cards?scope=CATALOG_ONLY"
 method: GET
 queryParams:
-  bank: CATHAY
   scope: CATALOG_ONLY
 order: 3000

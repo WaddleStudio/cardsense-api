@@ -1,6 +1,6 @@
 # CardSense API Implementation Checklist
 
-Updated: 2026-03-20
+Updated: 2026-03-27
 
 ## Done
 - Resolve scenario-driven recommendation requests with backward-compatible top-level fields.
@@ -24,8 +24,13 @@ Updated: 2026-03-20
   - `GET /v1/cards?bank=...&scope=...`
   - `POST /v1/recommendations/card`
   - stable `comparison.mode`, `recommendations[].estimatedReturn`, `promotionBreakdown`, and disclaimer fields
+- `/calc` demo slice constraints:
+  - reuse existing endpoints only; do not add a dedicated calculator endpoint or new DB table
+  - rely on response ordering plus stable `recommendations[].cardCode`, `cardName`, `bankName`, `cashbackValue`, and `estimatedReturn`
+  - keep annual loss math, minimum selected-card validation, sharing flow, and CTA param forwarding in the frontend layer
 - Recommended timing:
   - Start frontend now for catalog browsing, recommendation form, and result explanation UI.
+  - Treat `/calc` as the next frontend acquisition slice once current response ordering and `estimatedReturn` fields are locked.
   - Keep advanced UI for break-even analysis and multi-promotion visualization behind a feature flag until ESUN/CATHAY fixtures are locked.
 
 ## PostgreSQL / Supabase Timing
@@ -45,4 +50,5 @@ Updated: 2026-03-20
 ## Delivery Slice Recommendation
 1. Finish stackability rollout tests for ESUN and CATHAY fixtures.
 2. Start frontend with the current API contract and Postman collection as the shared smoke baseline.
-3. Plan PostgreSQL / Supabase after frontend contract feedback, not before.
+3. Ship `/calc` on top of the existing cards and recommendation endpoints as the B2C acquisition slice.
+4. Plan PostgreSQL / Supabase after frontend contract feedback, not before.
