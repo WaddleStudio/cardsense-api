@@ -180,6 +180,82 @@ public class DecisionEngineBenefitPlanTest {
         assertEquals("每月最多切換30次", rec.getActivePlan().getSwitchFrequency());
     }
 
+    @Test
+    public void testExpiredPlanPromotionsAreFilteredByRequestDate() {
+        Promotion basePromo = buildPromotion("base2", "base_ver2", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(1.0), 500, 0, LocalDate.of(2026, 6, 30));
+        basePromo.setPlanId(null);
+
+        Promotion expiredPlanPromo = buildPromotion("birthday1", "birthday_ver1", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        expiredPlanPromo.setPlanId("CATHAY_CUBE_BIRTHDAY");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(basePromo, expiredPlanPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_BIRTHDAY")).thenReturn(
+                buildPlan("CATHAY_CUBE_BIRTHDAY", "CATHAY_CUBE", "Birthday", "CATHAY_CUBE_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), "DAILY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000).category("ONLINE").date(LocalDate.of(2026, 4, 1)).build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNull(rec.getActivePlan());
+        assertEquals(10, rec.getEstimatedReturn());
+    }
+
+    @Test
+    public void testPlanValidUntilIsInclusiveOnRequestDate() {
+        Promotion birthdayPromo = buildPromotion("birthday2", "birthday_ver2", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        birthdayPromo.setPlanId("CATHAY_CUBE_BIRTHDAY");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(birthdayPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_BIRTHDAY")).thenReturn(
+                buildPlan("CATHAY_CUBE_BIRTHDAY", "CATHAY_CUBE", "Birthday", "CATHAY_CUBE_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), "DAILY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 31)).build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNotNull(rec.getActivePlan());
+        assertEquals("CATHAY_CUBE_BIRTHDAY", rec.getActivePlan().getPlanId());
+        assertEquals(50, rec.getEstimatedReturn());
+    }
+
+    @Test
+    public void testWinningPlanUsesHighestReturnAcrossExclusiveGroups() {
+        Promotion alphaPromo = buildPromotion("alpha1", "alpha_ver1", "MULTI_PLAN_CARD", "Multi Plan", "BANK1", "Bank One",
+                BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        alphaPromo.setPlanId("PLAN_ALPHA");
+
+        Promotion betaPromo = buildPromotion("beta1", "beta_ver1", "MULTI_PLAN_CARD", "Multi Plan", "BANK1", "Bank One",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        betaPromo.setPlanId("PLAN_BETA");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(alphaPromo, betaPromo));
+        when(benefitPlanRepository.findByPlanId("PLAN_ALPHA")).thenReturn(
+                buildPlan("PLAN_ALPHA", "MULTI_PLAN_CARD", "Alpha", "GROUP_ALPHA",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "DAILY")
+        );
+        when(benefitPlanRepository.findByPlanId("PLAN_BETA")).thenReturn(
+                buildPlan("PLAN_BETA", "MULTI_PLAN_CARD", "Beta", "GROUP_BETA",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "MONTHLY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 15)).build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNotNull(rec.getActivePlan());
+        assertEquals("PLAN_ALPHA", rec.getActivePlan().getPlanId());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName,
                                       String bankCode, String bankName, BigDecimal cashbackValue,
                                       Integer maxCashback, Integer annualFee, LocalDate validUntil) {
@@ -199,6 +275,20 @@ public class DecisionEngineBenefitPlanTest {
                 .cardStatus("ACTIVE")
                 .validUntil(validUntil)
                 .status("ACTIVE")
+                .build();
+    }
+
+    private BenefitPlan buildPlan(String planId, String cardCode, String planName, String exclusiveGroup,
+                                  LocalDate validFrom, LocalDate validUntil, String switchFrequency) {
+        return BenefitPlan.builder()
+                .planId(planId)
+                .cardCode(cardCode)
+                .planName(planName)
+                .switchFrequency(switchFrequency)
+                .exclusiveGroup(exclusiveGroup)
+                .status("ACTIVE")
+                .validFrom(validFrom)
+                .validUntil(validUntil)
                 .build();
     }
 

@@ -62,7 +62,7 @@ public class DecisionEngine {
         List<CardAggregate> rankedCards = scoredPromotions.stream()
                 .collect(Collectors.groupingBy(this::distinctCardKey, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
-                .map(this::toCardAggregate)
+                .map(promos -> toCardAggregate(promos, requestDate))
                 .sorted(cardAggregateComparator())
                 .toList();
 
@@ -190,11 +190,11 @@ public class DecisionEngine {
                 .thenComparing(cardAggregate -> cardAggregate.primaryPromotion().getPromoVersionId(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
     }
 
-    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions) {
+    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions, LocalDate requestDate) {
         List<String> notes = new ArrayList<>();
 
         // Resolve best plan before stack resolution
-        PlanResolution planResolution = resolveBestPlan(promotions);
+        PlanResolution planResolution = resolveBestPlan(promotions, requestDate);
         List<ScoredPromotion> effectivePromotions = planResolution.promotions();
 
         StackResolution resolution = resolveContributingPromotions(effectivePromotions);
@@ -211,17 +211,21 @@ public class DecisionEngine {
         return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes, planResolution.winningPlan());
     }
 
-    private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions) {
+    private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions, LocalDate requestDate) {
         List<ScoredPromotion> traditional = promotions.stream()
                 .filter(sp -> sp.promotion().getPlanId() == null || sp.promotion().getPlanId().isBlank())
                 .toList();
 
         List<ScoredPromotion> planBound = promotions.stream()
                 .filter(sp -> sp.promotion().getPlanId() != null && !sp.promotion().getPlanId().isBlank())
+                .filter(sp -> {
+                    BenefitPlan plan = benefitPlanRepository.findByPlanId(sp.promotion().getPlanId());
+                    return isPlanActiveOn(plan, requestDate);
+                })
                 .toList();
 
         if (planBound.isEmpty()) {
-            return new PlanResolution(promotions, null);
+            return new PlanResolution(traditional, null);
         }
 
         // Group plan-bound promotions by exclusiveGroup, then by planId within each group
@@ -249,6 +253,7 @@ public class DecisionEngine {
 
         List<ScoredPromotion> winningPlanPromotions = new ArrayList<>();
         BenefitPlan winningPlan = null;
+        int winningPlanReturn = Integer.MIN_VALUE;
 
         for (var entry : groupsByExclusive.entrySet()) {
             List<PlanGroup> planGroups = entry.getValue();
@@ -259,8 +264,9 @@ public class DecisionEngine {
                 winningPlanPromotions.addAll(best.promotions());
                 String originalPlanId = best.promotions().get(0).promotion().getPlanId();
                 BenefitPlan candidate = benefitPlanRepository.findByPlanId(originalPlanId);
-                if (candidate != null && (winningPlan == null || best.totalReturn() > 0)) {
+                if (candidate != null && best.totalReturn() > winningPlanReturn) {
                     winningPlan = candidate;
+                    winningPlanReturn = best.totalReturn();
                 }
             }
         }
@@ -269,6 +275,26 @@ public class DecisionEngine {
         combined.addAll(winningPlanPromotions);
 
         return new PlanResolution(combined, winningPlan);
+    }
+
+    private boolean isPlanActiveOn(BenefitPlan plan, LocalDate requestDate) {
+        if (plan == null) {
+            return false;
+        }
+
+        if (plan.getStatus() != null && !"ACTIVE".equalsIgnoreCase(plan.getStatus())) {
+            return false;
+        }
+
+        if (requestDate == null) {
+            return true;
+        }
+
+        if (plan.getValidFrom() != null && requestDate.isBefore(plan.getValidFrom())) {
+            return false;
+        }
+
+        return plan.getValidUntil() == null || !requestDate.isAfter(plan.getValidUntil());
     }
 
     private record PlanResolution(
@@ -533,6 +559,8 @@ public class DecisionEngine {
                 .planName(plan.getPlanName())
                 .switchRequired(true)
                 .switchFrequency(frequencyText)
+                .requiresSubscription(plan.isRequiresSubscription())
+                .subscriptionCost(plan.getSubscriptionCost())
                 .build();
     }
 

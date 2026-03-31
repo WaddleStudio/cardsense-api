@@ -14,4 +14,6 @@ public class ActivePlan {
     private String planName;
     private boolean switchRequired;
     private String switchFrequency;
+    private boolean requiresSubscription;
+    private String subscriptionCost;
 }
