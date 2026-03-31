@@ -32,7 +32,7 @@ public class SupabasePromotionRepository implements PromotionRepository {
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
                    bank_code, bank_name, category, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
-                   recommendation_scope, eligibility_type, conditions_json, excluded_conditions_json, status, raw_payload_json
+                   recommendation_scope, eligibility_type, plan_id, conditions_json, excluded_conditions_json, status, raw_payload_json
             FROM promotion_current
             """;
 
@@ -100,6 +100,7 @@ public class SupabasePromotionRepository implements PromotionRepository {
                     .requiresRegistration(Boolean.TRUE.equals(rs.getObject("requires_registration")))
                     .recommendationScope(rs.getString("recommendation_scope"))
                     .eligibilityType(rs.getString("eligibility_type"))
+                    .planId(rs.getString("plan_id"))
                     .stackability(parseStackability(rs.getString("raw_payload_json")))
                     .conditions(parseConditions(rs.getString("conditions_json")))
                     .excludedConditions(parseConditions(rs.getString("excluded_conditions_json")))
