@@ -60,8 +60,10 @@ class CatalogServiceTest {
         assertEquals(1, catalogService.listCards("CTBC", "ACTIVE", null, null).size());
         assertTrue(catalogService.listCards(null, "ACTIVE", null, null).stream()
                 .allMatch(card -> "ACTIVE".equals(card.getCardStatus())));
-        assertEquals(2, catalogService.listCards(null, null, "CATALOG_ONLY", null).size());
+        assertEquals(1, catalogService.listCards(null, null, "CATALOG_ONLY", null).size());
         assertEquals(List.of("RECOMMENDABLE", "CATALOG_ONLY"), catalogService.listCards("CTBC", null, null, null).get(0).getRecommendationScopes());
+        assertTrue(catalogService.listCards(null, null, null, null).stream()
+            .allMatch(card -> "ACTIVE".equals(card.getCardStatus())));
     }
 
     @Test
