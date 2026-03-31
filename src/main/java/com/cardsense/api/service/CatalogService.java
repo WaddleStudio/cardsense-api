@@ -82,6 +82,7 @@ public class CatalogService {
                 .recommendationScopes(List.copyOf(scopes))
                 .eligibilityType(promotion.getEligibilityType() != null ? promotion.getEligibilityType() : "GENERAL")
                 .availableCategories(categories)
+                .hasBenefitPlans(promotions.stream().anyMatch(p -> p.getPlanId() != null && !p.getPlanId().isBlank()))
                 .build();
     }
 

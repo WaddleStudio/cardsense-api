@@ -26,7 +26,7 @@ public class JsonBenefitPlanRepositoryTest {
     @Test
     public void testFindByCardCodeReturnsCubePlans() {
         List<BenefitPlan> plans = repository.findByCardCode("CATHAY_CUBE");
-        assertEquals(4, plans.size());
+        assertEquals(7, plans.size());
         assertTrue(plans.stream().allMatch(p -> "CATHAY_CUBE".equals(p.getCardCode())));
         assertTrue(plans.stream().allMatch(p -> "CATHAY_CUBE_PLANS".equals(p.getExclusiveGroup())));
     }
@@ -68,7 +68,7 @@ public class JsonBenefitPlanRepositoryTest {
     public void testFindActivePlansFiltersByDate() {
         LocalDate testDate = LocalDate.of(2026, 3, 15);
         List<BenefitPlan> plans = repository.findActivePlans(testDate);
-        assertEquals(14, plans.size());
+        assertEquals(17, plans.size());
         assertTrue(plans.stream().allMatch(p ->
                 !testDate.isBefore(p.getValidFrom()) && !testDate.isAfter(p.getValidUntil())
         ));

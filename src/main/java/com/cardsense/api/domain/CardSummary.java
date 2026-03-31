@@ -22,4 +22,5 @@ public class CardSummary {
     private List<String> recommendationScopes;
     private String eligibilityType;
     private List<String> availableCategories;
+    private boolean hasBenefitPlans;
 }
