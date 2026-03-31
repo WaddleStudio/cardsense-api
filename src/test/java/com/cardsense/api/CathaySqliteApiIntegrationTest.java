@@ -89,7 +89,7 @@ class CathaySqliteApiIntegrationTest {
         );
 
         assertEquals(HttpStatus.OK, allCardsResponse.getStatusCode());
-        assertEquals(3, allCardsResponse.getBody().size());
+        assertEquals(2, allCardsResponse.getBody().size());
         assertEquals(2, activeCardsResponse.getBody().size());
         assertEquals(2, catalogCardsResponse.getBody().size());
         assertEquals(1, recommendableCardsResponse.getBody().size());

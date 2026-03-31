@@ -113,15 +113,20 @@ public class CatalogService {
     }
 
     private boolean matchesStatus(String actualStatus, String requestedStatus) {
-        if (requestedStatus == null || requestedStatus.isBlank()) {
-            return true;
-        }
+        String normalizedRequestedStatus = normalizeStatus(requestedStatus);
+        String normalizedActualStatus = normalizeStatus(actualStatus);
+        return normalizedRequestedStatus.equalsIgnoreCase(normalizedActualStatus);
+    }
 
-        if (actualStatus == null) {
-            return false;
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "ACTIVE";
         }
-
-        return requestedStatus.equalsIgnoreCase(actualStatus);
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "INACTIVE", "DISCONTINUED", "STOPPED" -> "DISCONTINUED";
+            default -> "ACTIVE";
+        };
     }
 
     private boolean matchesScope(CardSummary card, String requestedScope) {
