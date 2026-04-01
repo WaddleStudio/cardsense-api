@@ -1,8 +1,29 @@
 # CardSense API — VIBE_SPEC
-### Updated: 2026-03-20
+### Updated: 2026-04-01
 
 ## Purpose
 This repository implements the external deterministic recommendation API for CardSense, with scenario-driven comparison, explicit boundary handling, and a forward-compatible contract for break-even analysis plus multi-promotion coexistence.
+
+## Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/health` | Health check (reports repository mode) |
+| GET | `/v1/banks` | List all banks |
+| GET | `/v1/cards` | List cards (filters: bank, status, scope, eligibilityType) |
+| GET | `/v1/cards/{cardCode}/promotions` | Card-specific promotion listing |
+| GET | `/v1/cards/{cardCode}/plans` | Benefit plans for card |
+| POST | `/v1/recommendations/card` | Scenario-driven recommendation |
+
+## Repository Modes
+
+| Mode | Storage | Usage |
+|------|---------|-------|
+| mock | In-memory JSON | Local dev, no DB needed |
+| sqlite | SQLite file | Local dev with real data |
+| supabase | PostgreSQL via JDBC | Production (Supabase hosted) |
+
+Configured via `cardsense.repository.mode` property or `SPRING_PROFILES_ACTIVE=prod`.
 
 ## Request Contract
 `RecommendationRequest` now supports both legacy top-level fields and a richer nested scenario/comparison structure.
@@ -139,7 +160,14 @@ public class Condition {
 }
 ```
 
+## Benefit Plans
+- Cards may have multiple benefit plans (e.g., DCC CUBE → UNO switching)
+- `/v1/cards/{cardCode}/plans` returns available plans with validity periods
+- Recommendation engine excludes expired benefit plans from scoring
+- Plan-aware switching logic in DecisionEngine
+
 ## Product Direction
 - The comparison unit is the card, not a standalone promotion.
 - A representative promotion remains in the response for backward compatibility and explainability.
-- Long term, the engine should stop depending on `raw_payload_json` fallback parsing and consume first-class stackability columns from SQLite / PostgreSQL storage.
+- Long term, the engine should stop depending on `raw_payload_json` fallback parsing and consume first-class stackability columns from PostgreSQL storage.
+- Supabase is the production data source; SQLite remains for local development.
