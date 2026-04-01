@@ -115,11 +115,17 @@ public class DecisionEngine {
             return false;
         }
 
-        // GUARDRAIL: Block unbounded high fixed cashbacks from distorting rankings on small transactions
-        if ("FIXED".equalsIgnoreCase(promotion.getCashbackType()) && promotion.getCashbackValue() != null) {
+        // GUARDRAIL: Block unbounded high fixed cashbacks from distorting rankings on small transactions.
+        // Applies to both FIXED type and POINTS fixed-bonus (value >= 30, treated as fixed NTD by RewardCalculator).
+        boolean isFixedReward = "FIXED".equalsIgnoreCase(promotion.getCashbackType());
+        boolean isPointsFixedBonus = "POINTS".equalsIgnoreCase(promotion.getCashbackType())
+                && promotion.getCashbackValue() != null
+                && promotion.getCashbackValue().compareTo(RewardCalculator.POINTS_FIXED_BONUS_THRESHOLD) >= 0;
+
+        if ((isFixedReward || isPointsFixedBonus) && promotion.getCashbackValue() != null) {
             boolean hasNoMinAmount = promotion.getMinAmount() == null || promotion.getMinAmount() == 0;
-            // E.g., preventing a "200 NTD voucher" from being recommended on a "50 NTD" transaction
-            // unless it's a platform-specific targeted transport reward
+            // E.g., preventing a "200 NTD voucher" or "2000-point bonus" from being recommended
+            // on a "50 NTD" transaction unless it's a platform-specific targeted transport reward
             if (hasNoMinAmount && promotion.getCashbackValue().intValue() >= 100 && promotion.getCashbackValue().intValue() > amount) {
                 if (!"TRANSPORT".equalsIgnoreCase(normalizeValue(promotion.getCategory()))) {
                     return false;
