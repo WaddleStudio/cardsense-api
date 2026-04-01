@@ -99,7 +99,7 @@ public class DecisionEngine {
             return false;
         }
 
-        if (!isEligibilityTypeEligible(promotion)) {
+        if (!isEligibilityTypeEligible(promotion, request)) {
             return false;
         }
 
@@ -113,6 +113,18 @@ public class DecisionEngine {
 
         if (promotion.getMinAmount() != null && amount < promotion.getMinAmount()) {
             return false;
+        }
+
+        // GUARDRAIL: Block unbounded high fixed cashbacks from distorting rankings on small transactions
+        if ("FIXED".equalsIgnoreCase(promotion.getCashbackType()) && promotion.getCashbackValue() != null) {
+            boolean hasNoMinAmount = promotion.getMinAmount() == null || promotion.getMinAmount() == 0;
+            // E.g., preventing a "200 NTD voucher" from being recommended on a "50 NTD" transaction
+            // unless it's a platform-specific targeted transport reward
+            if (hasNoMinAmount && promotion.getCashbackValue().intValue() >= 100 && promotion.getCashbackValue().intValue() > amount) {
+                if (!"TRANSPORT".equalsIgnoreCase(normalizeValue(promotion.getCategory()))) {
+                    return false;
+                }
+            }
         }
 
         if (request.getResolvedCardCodes() != null && !request.getResolvedCardCodes().isEmpty()) {
@@ -154,11 +166,30 @@ public class DecisionEngine {
                 || "RECOMMENDABLE".equalsIgnoreCase(recommendationScope);
     }
 
-    private boolean isEligibilityTypeEligible(Promotion promotion) {
+    private boolean isEligibilityTypeEligible(Promotion promotion, RecommendationRequest request) {
         String eligibilityType = promotion.getEligibilityType();
-        return eligibilityType == null
-                || eligibilityType.isBlank()
-                || "GENERAL".equalsIgnoreCase(eligibilityType);
+        if (eligibilityType == null || eligibilityType.isBlank() || "GENERAL".equalsIgnoreCase(eligibilityType)) {
+            return true;
+        }
+
+        // If explicitly requesting this specific card in a comparison, bypass the eligibility filter
+        if (request.getResolvedCardCodes() != null && !request.getResolvedCardCodes().isEmpty()) {
+            boolean explicitlyRequested = request.getResolvedCardCodes().stream()
+                    .map(this::normalizeValue)
+                    .anyMatch(cardCode -> cardCode.equals(normalizeValue(promotion.getCardCode())));
+            if (explicitlyRequested) {
+                return true;
+            }
+        }
+
+        // Otherwise, the user must explicitly be within the specified customer segment (e.g. "PROFESSION_SPECIFIC")
+        RecommendationScenario resolvedScenario = request.toResolvedScenario();
+        String userSegment = resolvedScenario != null ? resolvedScenario.getCustomerSegment() : null;
+        if (userSegment != null && eligibilityType.equalsIgnoreCase(userSegment)) {
+             return true;
+        }
+
+        return false;
     }
 
     private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {
