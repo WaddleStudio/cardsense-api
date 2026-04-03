@@ -30,7 +30,7 @@ public class SupabasePromotionRepository implements PromotionRepository {
 
     private static final String BASE_SELECT = """
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
-                   bank_code, bank_name, category, channel, valid_from, valid_until, min_amount,
+                   bank_code, bank_name, category, subcategory, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
                    recommendation_scope, eligibility_type, plan_id, conditions_json, excluded_conditions_json, status, raw_payload_json
             FROM promotion_current
@@ -89,6 +89,7 @@ public class SupabasePromotionRepository implements PromotionRepository {
                     .bankCode(rs.getString("bank_code"))
                     .bankName(rs.getString("bank_name"))
                     .category(rs.getString("category"))
+                    .subcategory(rs.getString("subcategory"))
                     .channel(rs.getString("channel"))
                     .validFrom(parseDate(rs.getString("valid_from")))
                     .validUntil(parseDate(rs.getString("valid_until")))

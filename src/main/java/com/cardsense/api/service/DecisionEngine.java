@@ -111,6 +111,18 @@ public class DecisionEngine {
             return false;
         }
 
+        String requestSubcategory = request.getResolvedSubcategory();
+        String promoSubcategory = normalizeValue(promotion.getSubcategory());
+
+        if (!"GENERAL".equals(promoSubcategory) && !promoSubcategory.isBlank()) {
+            if (requestSubcategory == null || requestSubcategory.isBlank()) {
+                return false;  // General query → exclude scene-specific promotions
+            }
+            if (!promoSubcategory.equals(normalizeValue(requestSubcategory))) {
+                return false;  // Different scene → exclude
+            }
+        }
+
         if (promotion.getMinAmount() != null && amount < promotion.getMinAmount()) {
             return false;
         }
@@ -564,6 +576,7 @@ public class DecisionEngine {
                 .cardName(promotion.getCardName())
                 .bankCode(promotion.getBankCode())
                 .bankName(promotion.getBankName())
+                .subcategory(promotion.getSubcategory())
                 .cashbackType(promotion.getCashbackType())
                 .cashbackValue(promotion.getCashbackValue())
                 .estimatedReturn(cardAggregate.totalReturn())

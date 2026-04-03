@@ -23,6 +23,8 @@ public class RecommendationRequest {
     @JsonAlias("merchant_category")
     private String category;
 
+    private String subcategory;
+
     private List<String> cardCodes;
 
     private List<String> registeredPromotionIds;
@@ -48,6 +50,13 @@ public class RecommendationRequest {
         return scenario != null && scenario.getCategory() != null && !scenario.getCategory().isBlank()
                 ? scenario.getCategory()
                 : category;
+    }
+
+    @JsonIgnore
+    public String getResolvedSubcategory() {
+        return scenario != null && scenario.getSubcategory() != null && !scenario.getSubcategory().isBlank()
+                ? scenario.getSubcategory()
+                : subcategory;
     }
 
     @JsonIgnore
@@ -78,6 +87,7 @@ public class RecommendationRequest {
         return RecommendationScenario.builder()
                 .amount(getResolvedAmount())
                 .category(getResolvedCategory())
+                .subcategory(getResolvedSubcategory())
                 .date(getResolvedDate())
                 .location(getResolvedLocation())
                 .channel(baseScenario.getChannel())

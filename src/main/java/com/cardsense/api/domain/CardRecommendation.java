@@ -18,6 +18,7 @@ public class CardRecommendation {
     private String cardName;
     private String bankCode;
     private String bankName;
+    private String subcategory;
     private String cashbackType;
     private BigDecimal cashbackValue;
     private Integer estimatedReturn;

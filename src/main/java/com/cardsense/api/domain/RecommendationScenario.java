@@ -16,6 +16,7 @@ import java.util.Map;
 public class RecommendationScenario {
     private Integer amount;
     private String category;
+    private String subcategory;
     private LocalDate date;
     private String location;
     private String channel;

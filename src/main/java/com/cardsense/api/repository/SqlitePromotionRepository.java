@@ -25,7 +25,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
 
     private static final String BASE_SELECT = """
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
-                   bank_code, bank_name, category, channel, valid_from, valid_until, min_amount,
+                   bank_code, bank_name, category, subcategory, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
                                          recommendation_scope, eligibility_type, plan_id, conditions_json, excluded_conditions_json, status, raw_payload_json
             FROM promotion_current
@@ -110,6 +110,7 @@ public class SqlitePromotionRepository implements PromotionRepository {
                         .bankCode(resultSet.getString("bank_code"))
                         .bankName(resultSet.getString("bank_name"))
                         .category(resultSet.getString("category"))
+                        .subcategory(resultSet.getString("subcategory"))
                         .channel(resultSet.getString("channel"))
                         .validFrom(parseDate(resultSet.getString("valid_from")))
                         .validUntil(parseDate(resultSet.getString("valid_until")))

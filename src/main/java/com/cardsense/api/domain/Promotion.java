@@ -41,6 +41,8 @@ public class Promotion {
 
     private String category;
 
+    private String subcategory;
+
     private String channel;
 
     @JsonAlias("start_date")
