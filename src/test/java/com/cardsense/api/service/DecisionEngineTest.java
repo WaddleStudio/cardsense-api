@@ -473,6 +473,57 @@ public class DecisionEngineTest {
         assertTrue(response.getRecommendations().isEmpty());
     }
 
+    @Test
+    public void testRecommendSubcategoryQueryOnlyIncludesExactSubcategoryPromotions() {
+        Promotion deliveryPromo = buildPromotion("promo1", "ver1", "CARD_DELIVERY", "外送神卡", "CTBC", "中國信託", BigDecimal.valueOf(10.0), null, 0, LocalDate.of(2026, 6, 30));
+        deliveryPromo.setCategory("DINING");
+        deliveryPromo.setSubcategory("DELIVERY");
+
+        Promotion restaurantPromo = buildPromotion("promo2", "ver2", "CARD_RESTAURANT", "餐廳神卡", "CATHAY", "國泰世華", BigDecimal.valueOf(8.0), null, 0, LocalDate.of(2026, 6, 30));
+        restaurantPromo.setCategory("DINING");
+        restaurantPromo.setSubcategory("RESTAURANT");
+
+        Promotion generalPromo = buildPromotion("promo3", "ver3", "CARD_GENERAL", "餐飲通用卡", "ESUN", "玉山銀行", BigDecimal.valueOf(6.0), null, 0, LocalDate.of(2026, 6, 30));
+        generalPromo.setCategory("DINING");
+        generalPromo.setSubcategory("GENERAL");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(deliveryPromo, restaurantPromo, generalPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("DINING")
+                .subcategory("DELIVERY")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
+        assertEquals("DELIVERY", response.getRecommendations().get(0).getSubcategory());
+    }
+
+    @Test
+    public void testRecommendGeneralQueryStillExcludesSceneSpecificPromotions() {
+        Promotion deliveryPromo = buildPromotion("promo1", "ver1", "CARD_DELIVERY", "外送神卡", "CTBC", "中國信託", BigDecimal.valueOf(10.0), null, 0, LocalDate.of(2026, 6, 30));
+        deliveryPromo.setCategory("DINING");
+        deliveryPromo.setSubcategory("DELIVERY");
+
+        Promotion generalPromo = buildPromotion("promo2", "ver2", "CARD_GENERAL", "餐飲通用卡", "ESUN", "玉山銀行", BigDecimal.valueOf(3.0), null, 0, LocalDate.of(2026, 6, 30));
+        generalPromo.setCategory("DINING");
+        generalPromo.setSubcategory("GENERAL");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(deliveryPromo, generalPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("DINING")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo2", response.getRecommendations().get(0).getPromotionId());
+        assertEquals("GENERAL", response.getRecommendations().get(0).getSubcategory());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)
