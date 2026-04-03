@@ -1,4 +1,4 @@
-﻿package com.cardsense.api.service;
+package com.cardsense.api.service;
 
 import com.cardsense.api.domain.ActivePlan;
 import com.cardsense.api.domain.BenefitPlan;
@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DecisionEngine {
 
-    public static final String DISCLAIMER = "CardSense ??靽∠?∪??頛?閮?銝????遣霅啜祕??擖???銵?皞?隢誑?銵?蝬脰?閮?蝯???;
+    public static final String DISCLAIMER = "CardSense 提供信用卡優惠比較資訊，不構成金融建議。實際回饋依各銀行公告為準，請以銀行官網資訊為最終依據。";
 
     private static final Set<String> PLATFORM_CONDITION_TYPES = Set.of(
             "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "PAYMENT_PLATFORM"
@@ -251,7 +251,7 @@ public class DecisionEngine {
         notes.addAll(resolution.notes());
 
         if (planResolution.winningPlan() != null) {
-            notes.add(String.format("?刻???喋?s?獢誑?脣??擃?擖?, planResolution.winningPlan().getPlanName()));
+            notes.add(String.format("推薦切換至「%s」方案以獲得最高回饋。", planResolution.winningPlan().getPlanName()));
         }
 
         ScoredPromotion primary = contributingPromotions.get(0);
@@ -392,10 +392,10 @@ public class DecisionEngine {
 
         List<String> notes = new ArrayList<>();
         if (bestSelection.size() > 1) {
-            notes.add("憭?蒂摮芋撘歇??promotion.stackability 憿臬? metadata ?批嚗璅酉 metadata ??鞈?銝??湔閬?臭蒂摮?);
+            notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
         }
         if (promotions.size() > bestSelection.size()) {
-            notes.add("?典?蝚血?璇辣??蝝?∠?蝮賢?擖????航?舐撩撠?stackability metadata?皛輯雲 requires 璇辣嚗??歇?詨???乓?);
+            notes.add("部分符合條件的優惠未納入卡片總回饋，原因可能是缺少 stackability metadata、未滿足 requires 條件，或與已選優惠互斥。");
         }
 
         return new StackResolution(bestSelection, notes);
@@ -549,7 +549,7 @@ public class DecisionEngine {
                 : promotion.getCashbackValue().stripTrailingZeros().toPlainString();
         String reason = cardAggregate.contributingPromotions().size() > 1
                 ? String.format(
-                "%s %s ??%d ??賭葉???閮?隡啣?擖?$%d ??隞?”?芣???%s%s嚗? %s",
+                "%s %s — %d 個可命中的優惠合計預估回饋 $%d 元；代表優惠為 %s%s，優惠至 %s",
                 promotion.getBankName(),
                 promotion.getCardName(),
                 cardAggregate.contributingPromotions().size(),
@@ -558,7 +558,7 @@ public class DecisionEngine {
                 resolveCashbackSuffix(promotion.getCashbackType()),
                 promotion.getValidUntil())
                 : String.format(
-                "%s %s ??%s 瘨祥鈭?%s%s ??嚗?隡啣?擖?$%d ???芣???%s",
+                "%s %s — %s 消費享 %s%s 回饋，預估回饋 $%d 元，優惠至 %s",
                 promotion.getBankName(),
                 promotion.getCardName(),
                 promotion.getCategory(),
@@ -597,11 +597,11 @@ public class DecisionEngine {
             return null;
         }
         String frequencyText = switch (plan.getSwitchFrequency().toUpperCase()) {
-            case "DAILY" -> "瘥予?臬???甈?;
+            case "DAILY" -> "每天可切換1次";
             case "MONTHLY" -> plan.getSwitchMaxPerMonth() != null
-                    ? String.format("瘥??憭???d甈?, plan.getSwitchMaxPerMonth())
-                    : "瘥??臬???;
-            case "UNLIMITED" -> "銝?甈⊥";
+                    ? String.format("每月最多切換%d次", plan.getSwitchMaxPerMonth())
+                    : "每月可切換";
+            case "UNLIMITED" -> "不限次數";
             default -> plan.getSwitchFrequency();
         };
         return ActivePlan.builder()
@@ -644,13 +644,13 @@ public class DecisionEngine {
                     ) {
                     if (cardAggregate.contributingPromotions().size() > 1) {
                         return contributes
-                            ? "靘?stackability metadata ?文??航??亙?蜇????
-                            : "?芰??亙?蜇??嚗撩撠?stackability metadata?皛輯雲 requires 璇辣嚗??歇?詨???乓?;
+                            ? "依 stackability metadata 判定可計入卡片總回饋。"
+                            : "未納入卡片總回饋：缺少 stackability metadata、未滿足 requires 條件，或與已選優惠互斥。";
                     }
 
                     return String.format(
-                        "%s嚗?隡啣?擖?$%d ??撠?敺?$%d ??,
-                        contributes ? "閮?∠?蝮賢?擖? : "???箸?頛???,
+                        "%s：預估回饋 $%d 元，封頂後 $%d 元。",
+                        contributes ? "計入卡片總回饋" : "僅作為比較參考",
                         scoredPromotion.estimatedReturn(),
                         scoredPromotion.cappedReturn());
                     }
@@ -787,7 +787,7 @@ public class DecisionEngine {
             conditions.add(PromotionCondition.builder()
                     .type("MIN_SPEND")
                     .value(String.valueOf(promotion.getMinAmount()))
-                    .label("?雿?鞎?" + promotion.getMinAmount() + " ??)
+                    .label("最低消費 " + promotion.getMinAmount() + " 元")
                     .build());
         }
 
@@ -795,7 +795,7 @@ public class DecisionEngine {
             conditions.add(PromotionCondition.builder()
                     .type("REGISTRATION_REQUIRED")
                     .value("true")
-                    .label("??駁?瘣餃?")
+                    .label("需登錄活動")
                     .build());
         }
 
@@ -803,7 +803,7 @@ public class DecisionEngine {
             conditions.add(PromotionCondition.builder()
                     .type("FREQUENCY_LIMIT")
                     .value(promotion.getFrequencyLimit().toUpperCase())
-                    .label("?餌?? " + promotion.getFrequencyLimit().toUpperCase())
+                    .label("頻率限制 " + promotion.getFrequencyLimit().toUpperCase())
                     .build());
         }
 
@@ -827,9 +827,9 @@ public class DecisionEngine {
             List<BreakEvenAnalysis> breakEvenAnalyses
     ) {
         List<String> notes = new ArrayList<>();
-        notes.add("憭?蒂摮芋撘歇??promotion.stackability 憿臬? metadata ?批嚗璅酉 metadata ??鞈?銝??湔閬?臭蒂摮?);
+        notes.add("多優惠並存模式已由 promotion.stackability 顯式 metadata 控制；未標註 metadata 的舊資料不得直接視為可並存。");
         if (breakEvenAnalyses.isEmpty()) {
-            notes.add("?祆活瘥?瘝??航?蝞? FIXED vs PERCENT/POINTS break-even pair嚗??澆蝡舀閬?頛詨 break-even ????);
+            notes.add("本次比較沒有可計算的 FIXED vs PERCENT/POINTS break-even pair，或呼叫端未要求輸出 break-even 分析。");
         }
 
         return RecommendationComparisonSummary.builder()
@@ -879,13 +879,13 @@ public class DecisionEngine {
         Integer capSaturationAmount = rewardCalculator.calculateCapSaturationAmount(variablePromotion);
         String summary = capSaturationAmount != null && capSaturationAmount < breakEvenAmount
                 ? String.format(
-                "%s ??%s ??隢?break-even 蝝 %d ??雿???芣??蝝?%d ????撠???,
+                "%s 與 %s 的理論 break-even 約在 %d 元，但百分比優惠會在約 %d 元時先達封頂。",
                 leftPromotion.getCardName(),
                 rightPromotion.getCardName(),
                 breakEvenAmount,
                 capSaturationAmount)
                 : String.format(
-                "%s ??%s ??隢?break-even 蝝 %d ?鈭斗???擃甇文潘??曉?瘥??芣??虜??澆摰?擖?,
+                "%s 與 %s 的理論 break-even 約在 %d 元。若交易金額高於此值，百分比型優惠通常會優於固定回饋。",
                 leftPromotion.getCardName(),
                 rightPromotion.getCardName(),
                 breakEvenAmount);
@@ -916,7 +916,7 @@ public class DecisionEngine {
 
         return switch (cashbackType.toUpperCase()) {
             case "PERCENT", "POINTS" -> "%";
-            case "FIXED" -> " ??;
+            case "FIXED" -> " 元";
             default -> "";
         };
     }
@@ -937,4 +937,3 @@ public class DecisionEngine {
         ) {
         }
 }
-
