@@ -63,6 +63,7 @@ public class DecisionEngine {
                 .collect(Collectors.groupingBy(this::distinctCardKey, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
                 .map(promos -> toCardAggregate(promos, requestDate))
+                .filter(Objects::nonNull)
                 .sorted(cardAggregateComparator())
                 .toList();
 
@@ -245,9 +246,15 @@ public class DecisionEngine {
         // Resolve best plan before stack resolution
         PlanResolution planResolution = resolveBestPlan(promotions, requestDate);
         List<ScoredPromotion> effectivePromotions = planResolution.promotions();
+        if (effectivePromotions.isEmpty()) {
+            return null;
+        }
 
         StackResolution resolution = resolveContributingPromotions(effectivePromotions);
         List<ScoredPromotion> contributingPromotions = resolution.contributingPromotions();
+        if (contributingPromotions.isEmpty()) {
+            return null;
+        }
         notes.addAll(resolution.notes());
 
         if (planResolution.winningPlan() != null) {
@@ -358,6 +365,9 @@ public class DecisionEngine {
     private static final int MAX_BITMASK_SIZE = 5;
 
     private StackResolution resolveContributingPromotions(List<ScoredPromotion> promotions) {
+        if (promotions.isEmpty()) {
+            return new StackResolution(List.of(), List.of());
+        }
         if (promotions.size() <= 1) {
             return new StackResolution(List.of(promotions.get(0)), List.of());
         }

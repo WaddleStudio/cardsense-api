@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 public class DecisionEngineTest {
 
     private PromotionRepository promotionRepository;
+    private BenefitPlanRepository benefitPlanRepository;
     private RewardCalculator rewardCalculator;
     private DecisionEngine decisionEngine;
 
@@ -34,7 +35,7 @@ public class DecisionEngineTest {
     public void setup() {
         promotionRepository = Mockito.mock(PromotionRepository.class);
         rewardCalculator = new RewardCalculator();
-        BenefitPlanRepository benefitPlanRepository = Mockito.mock(BenefitPlanRepository.class);
+        benefitPlanRepository = Mockito.mock(BenefitPlanRepository.class);
         decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator, benefitPlanRepository);
     }
 
@@ -522,6 +523,26 @@ public class DecisionEngineTest {
         assertEquals(1, response.getRecommendations().size());
         assertEquals("promo2", response.getRecommendations().get(0).getPromotionId());
         assertEquals("GENERAL", response.getRecommendations().get(0).getSubcategory());
+    }
+
+    @Test
+    public void testRecommendSkipsCardWhenPlanResolutionLeavesNoPromotions() {
+        Promotion departmentPlanPromo = buildPromotion("promo1", "ver1", "CATHAY_CUBE", "國泰 CUBE 卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), null, 0, LocalDate.of(2026, 6, 30));
+        departmentPlanPromo.setCategory("SHOPPING");
+        departmentPlanPromo.setSubcategory("DEPARTMENT");
+        departmentPlanPromo.setPlanId("CATHAY_CUBE_SHOPPING");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(departmentPlanPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_SHOPPING")).thenReturn(null);
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("SHOPPING")
+                .subcategory("DEPARTMENT")
+                .date(LocalDate.now())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty());
     }
 
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {
