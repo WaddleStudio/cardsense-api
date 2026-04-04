@@ -19,6 +19,7 @@ import com.cardsense.api.repository.PromotionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,7 +39,14 @@ public class DecisionEngine {
     public static final String DISCLAIMER = "CardSense 提供信用卡優惠比較資訊，不構成金融建議。實際回饋依各銀行公告為準，請以銀行官網資訊為最終依據。";
 
     private static final Set<String> PLATFORM_CONDITION_TYPES = Set.of(
-            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "PAYMENT_PLATFORM"
+            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "PAYMENT_PLATFORM", "MERCHANT"
+    );
+    private static final String CATHAY_CUBE_CARD_CODE = "CATHAY_CUBE";
+    private static final String CUBE_DEFAULT_TIER = "LEVEL_1";
+    private static final Set<String> CUBE_TIERED_PLAN_IDS = Set.of(
+            "CATHAY_CUBE_DIGITAL",
+            "CATHAY_CUBE_SHOPPING",
+            "CATHAY_CUBE_TRAVEL"
     );
 
     private final PromotionRepository promotionRepository;
@@ -53,6 +61,7 @@ public class DecisionEngine {
         Comparator<ScoredPromotion> promotionComparator = recommendationComparator();
 
         List<ScoredPromotion> scoredPromotions = activePromotions.stream()
+                .map(promotion -> applyRuntimeAdjustments(promotion, request))
                 .filter(promotion -> isEligible(promotion, request))
                 .map(promotion -> toScoredPromotion(promotion, resolvedScenario.getAmount()))
                 .filter(scored -> scored.cappedReturn() > 0)
@@ -209,6 +218,83 @@ public class DecisionEngine {
         }
 
         return false;
+    }
+
+    private Promotion applyRuntimeAdjustments(Promotion promotion, RecommendationRequest request) {
+        if (!CATHAY_CUBE_CARD_CODE.equals(normalizeValue(promotion.getCardCode()))) {
+            return promotion;
+        }
+
+        String normalizedPlanId = normalizeValue(promotion.getPlanId());
+        if (!CUBE_TIERED_PLAN_IDS.contains(normalizedPlanId)) {
+            return promotion;
+        }
+
+        String normalizedTier = normalizeCubeTier(request.getResolvedBenefitPlanTier(CATHAY_CUBE_CARD_CODE));
+        BigDecimal adjustedRate = cubeTierRate(normalizedTier);
+        if (adjustedRate == null || adjustedRate.compareTo(promotion.getCashbackValue()) == 0) {
+            return promotion;
+        }
+
+        List<PromotionCondition> adjustedConditions = new ArrayList<>();
+        if (promotion.getConditions() != null) {
+            adjustedConditions.addAll(promotion.getConditions());
+        }
+        adjustedConditions.add(PromotionCondition.builder()
+                .type("ASSUMED_BENEFIT_TIER")
+                .value(normalizedTier)
+                .label("依 CUBE 等級假設計算：" + normalizedTier)
+                .build());
+
+        return Promotion.builder()
+                .promoId(promotion.getPromoId())
+                .promoVersionId(promotion.getPromoVersionId())
+                .title(promotion.getTitle())
+                .cardCode(promotion.getCardCode())
+                .cardName(promotion.getCardName())
+                .cardStatus(promotion.getCardStatus())
+                .annualFee(promotion.getAnnualFee())
+                .applyUrl(promotion.getApplyUrl())
+                .bankCode(promotion.getBankCode())
+                .bankName(promotion.getBankName())
+                .category(promotion.getCategory())
+                .subcategory(promotion.getSubcategory())
+                .channel(promotion.getChannel())
+                .validFrom(promotion.getValidFrom())
+                .validUntil(promotion.getValidUntil())
+                .minAmount(promotion.getMinAmount())
+                .cashbackType(promotion.getCashbackType())
+                .cashbackValue(adjustedRate)
+                .maxCashback(promotion.getMaxCashback())
+                .frequencyLimit(promotion.getFrequencyLimit())
+                .requiresRegistration(promotion.isRequiresRegistration())
+                .recommendationScope(promotion.getRecommendationScope())
+                .eligibilityType(promotion.getEligibilityType())
+                .stackability(promotion.getStackability())
+                .conditions(adjustedConditions)
+                .excludedConditions(promotion.getExcludedConditions())
+                .status(promotion.getStatus())
+                .planId(promotion.getPlanId())
+                .build();
+    }
+
+    private String normalizeCubeTier(String rawTier) {
+        String normalized = normalizeValue(rawTier);
+        if ("LEVEL_2".equals(normalized) || "L2".equals(normalized)) {
+            return "LEVEL_2";
+        }
+        if ("LEVEL_3".equals(normalized) || "L3".equals(normalized)) {
+            return "LEVEL_3";
+        }
+        return CUBE_DEFAULT_TIER;
+    }
+
+    private BigDecimal cubeTierRate(String normalizedTier) {
+        return switch (normalizedTier) {
+            case "LEVEL_2" -> BigDecimal.valueOf(3.0);
+            case "LEVEL_3" -> BigDecimal.valueOf(3.3);
+            default -> BigDecimal.valueOf(2.0);
+        };
     }
 
     private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {

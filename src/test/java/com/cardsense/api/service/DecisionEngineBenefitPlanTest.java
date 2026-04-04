@@ -83,6 +83,7 @@ public class DecisionEngineBenefitPlanTest {
                 .comparison(RecommendationComparisonOptions.builder()
                         .includePromotionBreakdown(true)
                         .build())
+                .benefitPlanTiers(java.util.Map.of("CATHAY_CUBE", "LEVEL_2"))
                 .build());
 
         assertEquals(1, response.getRecommendations().size());
@@ -146,6 +147,7 @@ public class DecisionEngineBenefitPlanTest {
                         .amount(1000).category("ONLINE").date(LocalDate.of(2026, 3, 15)).build())
                 .comparison(RecommendationComparisonOptions.builder()
                         .includePromotionBreakdown(true).build())
+                .benefitPlanTiers(java.util.Map.of("CATHAY_CUBE", "LEVEL_2"))
                 .build());
 
         assertEquals(1, response.getRecommendations().size());

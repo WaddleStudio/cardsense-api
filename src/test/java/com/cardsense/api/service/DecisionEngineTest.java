@@ -1,6 +1,7 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.BenefitUsage;
+import com.cardsense.api.domain.BenefitPlan;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
 import com.cardsense.api.domain.PromotionStackability;
@@ -475,6 +476,35 @@ public class DecisionEngineTest {
     }
 
     @Test
+    public void testRecommendMatchesMerchantCondition() {
+        Promotion chatgptPromo = buildPromotion("promo1", "ver1", "CATHAY_CUBE", "國泰 CUBE 卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), null, 0, LocalDate.of(2026, 6, 30));
+        chatgptPromo.setConditions(List.of(condition("MERCHANT", "CHATGPT", "ChatGPT")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(chatgptPromo));
+
+        RecommendationResponse match = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .merchantName("CHATGPT")
+                        .date(LocalDate.now())
+                        .build())
+                .build());
+
+        RecommendationResponse mismatch = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .merchantName("CLAUDE")
+                        .date(LocalDate.now())
+                        .build())
+                .build());
+
+        assertEquals(1, match.getRecommendations().size());
+        assertTrue(mismatch.getRecommendations().isEmpty());
+    }
+
+    @Test
     public void testRecommendSubcategoryQueryOnlyIncludesExactSubcategoryPromotions() {
         Promotion deliveryPromo = buildPromotion("promo1", "ver1", "CARD_DELIVERY", "外送神卡", "CTBC", "中國信託", BigDecimal.valueOf(10.0), null, 0, LocalDate.of(2026, 6, 30));
         deliveryPromo.setCategory("DINING");
@@ -543,6 +573,71 @@ public class DecisionEngineTest {
                 .build());
 
         assertTrue(response.getRecommendations().isEmpty());
+    }
+
+    @Test
+    public void testCubeTierDefaultsToLevel1WhenRequestDoesNotSpecifyTier() {
+        Promotion cubePlanPromo = buildPromotion("promo1", "ver1", "CATHAY_CUBE", "國泰 CUBE 卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), null, 0, LocalDate.of(2026, 6, 30));
+        cubePlanPromo.setCategory("ONLINE");
+        cubePlanPromo.setPlanId("CATHAY_CUBE_DIGITAL");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(cubePlanPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(
+                BenefitPlan.builder()
+                        .planId("CATHAY_CUBE_DIGITAL")
+                        .cardCode("CATHAY_CUBE")
+                        .planName("玩數位")
+                        .exclusiveGroup("CATHAY_CUBE_PLANS")
+                        .switchFrequency("DAILY")
+                        .status("ACTIVE")
+                        .validFrom(LocalDate.of(2026, 1, 1))
+                        .validUntil(LocalDate.of(2026, 6, 30))
+                        .build()
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 4))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(20, response.getRecommendations().get(0).getEstimatedReturn());
+        assertTrue(response.getRecommendations().get(0).getConditions().stream()
+                .anyMatch(condition -> "ASSUMED_BENEFIT_TIER".equals(condition.getType()) && "LEVEL_1".equals(condition.getValue())));
+    }
+
+    @Test
+    public void testCubeTierCanUpgradeToLevel3ViaRequest() {
+        Promotion cubePlanPromo = buildPromotion("promo1", "ver1", "CATHAY_CUBE", "國泰 CUBE 卡", "CATHAY", "國泰世華", BigDecimal.valueOf(3.0), null, 0, LocalDate.of(2026, 6, 30));
+        cubePlanPromo.setCategory("ONLINE");
+        cubePlanPromo.setPlanId("CATHAY_CUBE_DIGITAL");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(cubePlanPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(
+                BenefitPlan.builder()
+                        .planId("CATHAY_CUBE_DIGITAL")
+                        .cardCode("CATHAY_CUBE")
+                        .planName("玩數位")
+                        .exclusiveGroup("CATHAY_CUBE_PLANS")
+                        .switchFrequency("DAILY")
+                        .status("ACTIVE")
+                        .validFrom(LocalDate.of(2026, 1, 1))
+                        .validUntil(LocalDate.of(2026, 6, 30))
+                        .build()
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 4))
+                .benefitPlanTiers(java.util.Map.of("CATHAY_CUBE", "LEVEL_3"))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(33, response.getRecommendations().get(0).getEstimatedReturn());
+        assertTrue(response.getRecommendations().get(0).getConditions().stream()
+                .anyMatch(condition -> "ASSUMED_BENEFIT_TIER".equals(condition.getType()) && "LEVEL_3".equals(condition.getValue())));
     }
 
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, String cardName, String bankCode, String bankName, BigDecimal cashbackValue, Integer maxCashback, Integer annualFee, LocalDate validUntil) {

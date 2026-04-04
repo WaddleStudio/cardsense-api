@@ -9,7 +9,10 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -39,6 +42,9 @@ public class RecommendationRequest {
     private RecommendationScenario scenario;
 
     private RecommendationComparisonOptions comparison;
+
+    @JsonAlias("benefit_plan_tiers")
+    private Map<String, String> benefitPlanTiers;
 
     @JsonIgnore
     public Integer getResolvedAmount() {
@@ -127,6 +133,29 @@ public class RecommendationRequest {
             return comparison.getCompareCardCodes();
         }
         return cardCodes;
+    }
+
+    @JsonIgnore
+    public Map<String, String> getResolvedBenefitPlanTiers() {
+        if (benefitPlanTiers == null || benefitPlanTiers.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return benefitPlanTiers.entrySet().stream()
+                .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
+                .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
+                .collect(Collectors.toUnmodifiableMap(
+                        entry -> entry.getKey().trim().toUpperCase(),
+                        entry -> entry.getValue().trim().toUpperCase(),
+                        (left, right) -> right
+                ));
+    }
+
+    @JsonIgnore
+    public String getResolvedBenefitPlanTier(String cardCode) {
+        if (cardCode == null || cardCode.isBlank()) {
+            return null;
+        }
+        return getResolvedBenefitPlanTiers().get(cardCode.trim().toUpperCase());
     }
 
     @AssertTrue(message = "Scenario amount is required and must be non-negative")
