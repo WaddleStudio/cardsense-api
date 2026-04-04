@@ -58,10 +58,7 @@ public class CatalogService {
 
     private CardSummary toCardSummary(List<Promotion> promotions) {
         Promotion promotion = promotions.get(0);
-        Set<String> scopes = promotions.stream()
-                .map(Promotion::getRecommendationScope)
-                .map(this::normalizeScope)
-                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        List<String> scopes = resolveCardScopes(promotions);
 
         List<String> categories = promotions.stream()
                 .map(Promotion::getCategory)
@@ -84,6 +81,24 @@ public class CatalogService {
                 .availableCategories(categories)
                 .hasBenefitPlans(promotions.stream().anyMatch(p -> p.getPlanId() != null && !p.getPlanId().isBlank()))
                 .build();
+    }
+
+    private List<String> resolveCardScopes(List<Promotion> promotions) {
+        Set<String> scopes = promotions.stream()
+                .map(Promotion::getRecommendationScope)
+                .map(this::normalizeScope)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
+        if (scopes.contains("RECOMMENDABLE")) {
+            return List.of("RECOMMENDABLE");
+        }
+        if (scopes.contains("CATALOG_ONLY")) {
+            return List.of("CATALOG_ONLY");
+        }
+        if (scopes.contains("FUTURE_SCOPE")) {
+            return List.of("FUTURE_SCOPE");
+        }
+        return List.of("RECOMMENDABLE");
     }
 
     private String resolveEligibilityType(List<Promotion> promotions) {
