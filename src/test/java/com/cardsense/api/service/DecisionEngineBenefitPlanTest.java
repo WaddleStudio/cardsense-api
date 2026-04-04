@@ -1,6 +1,5 @@
 package com.cardsense.api.service;
 
-import com.cardsense.api.domain.ActivePlan;
 import com.cardsense.api.domain.BenefitPlan;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.domain.PromotionCondition;
