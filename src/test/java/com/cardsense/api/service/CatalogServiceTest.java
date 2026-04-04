@@ -76,4 +76,33 @@ class CatalogServiceTest {
 
         assertEquals(2, catalogService.listBanks().size());
     }
+    @Test
+    void listCardsAggregatesNonGeneralEligibilityAtCardLevel() {
+        Promotion generalPromo = Promotion.builder()
+                .cardCode("CTBC_DOCTOR")
+                .cardName("CTBC Doctor Card")
+                .cardStatus("ACTIVE")
+                .annualFee(0)
+                .bankCode("CTBC")
+                .bankName("CTBC")
+                .recommendationScope("RECOMMENDABLE")
+                .eligibilityType("GENERAL")
+                .build();
+
+        Promotion professionPromo = Promotion.builder()
+                .cardCode("CTBC_DOCTOR")
+                .cardName("CTBC Doctor Card")
+                .cardStatus("ACTIVE")
+                .annualFee(0)
+                .bankCode("CTBC")
+                .bankName("CTBC")
+                .recommendationScope("RECOMMENDABLE")
+                .eligibilityType("PROFESSION_SPECIFIC")
+                .build();
+
+        when(promotionRepository.findAllPromotions()).thenReturn(List.of(generalPromo, professionPromo));
+
+        assertEquals(1, catalogService.listCards(null, null, null, "PROFESSION_SPECIFIC").size());
+        assertEquals("PROFESSION_SPECIFIC", catalogService.listCards(null, null, null, null).get(0).getEligibilityType());
+    }
 }

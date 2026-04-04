@@ -80,10 +80,25 @@ public class CatalogService {
                 .bankCode(promotion.getBankCode())
                 .bankName(promotion.getBankName())
                 .recommendationScopes(List.copyOf(scopes))
-                .eligibilityType(promotion.getEligibilityType() != null ? promotion.getEligibilityType() : "GENERAL")
+                .eligibilityType(resolveEligibilityType(promotions))
                 .availableCategories(categories)
                 .hasBenefitPlans(promotions.stream().anyMatch(p -> p.getPlanId() != null && !p.getPlanId().isBlank()))
                 .build();
+    }
+
+    private String resolveEligibilityType(List<Promotion> promotions) {
+        Set<String> types = promotions.stream()
+                .map(Promotion::getEligibilityType)
+                .map(this::normalizeEligibilityType)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+
+        if (types.contains("BUSINESS")) {
+            return "BUSINESS";
+        }
+        if (types.contains("PROFESSION_SPECIFIC")) {
+            return "PROFESSION_SPECIFIC";
+        }
+        return "GENERAL";
     }
 
     private String cardKey(Promotion promotion) {
@@ -148,5 +163,11 @@ public class CatalogService {
 
     private String normalizeScope(String scope) {
         return scope == null || scope.isBlank() ? "RECOMMENDABLE" : scope.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeEligibilityType(String eligibilityType) {
+        return eligibilityType == null || eligibilityType.isBlank()
+                ? "GENERAL"
+                : eligibilityType.trim().toUpperCase(Locale.ROOT);
     }
 }
