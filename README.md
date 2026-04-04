@@ -126,3 +126,16 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 - `POINTS` 尚未引入銀行別點數折現規則
 - Break-even 目前只處理代表 promotion 間的 `FIXED` vs `PERCENT` 比較
 - `STACK_ALL_ELIGIBLE` 仍為 heuristic aggregation，待 `stackability` 標註完整後升級為 deterministic stacking
+## Documentation Addendum (2026-04-05)
+
+### Card Catalog Eligibility
+
+- `GET /v1/cards` supports filtering by `eligibilityType`.
+- Supported values are `GENERAL`, `PROFESSION_SPECIFIC`, and `BUSINESS`.
+- Card-level `eligibilityType` is aggregated from all promotions belonging to the same card.
+- Aggregation precedence is `BUSINESS > PROFESSION_SPECIFIC > GENERAL`.
+
+### Operational Note
+
+- API-side aggregation alone is not enough if extractor data is stale.
+- After changing extractor eligibility heuristics, rerun the extraction/import pipeline before validating card catalog filtering in the frontend.
