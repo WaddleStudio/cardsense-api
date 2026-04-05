@@ -38,8 +38,27 @@ public class DecisionEngine {
 
     public static final String DISCLAIMER = "CardSense 提供信用卡優惠比較資訊，不構成金融建議。實際回饋依各銀行公告為準，請以銀行官網資訊為最終依據。";
 
-    private static final Set<String> PLATFORM_CONDITION_TYPES = Set.of(
-            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "PAYMENT_PLATFORM", "MERCHANT"
+    private static final Set<String> MERCHANT_CONDITION_TYPES = Set.of(
+            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "MERCHANT"
+    );
+    private static final Set<String> PAYMENT_CONDITION_TYPES = Set.of(
+            "PAYMENT_PLATFORM", "PAYMENT_METHOD"
+    );
+    private static final Set<String> MOBILE_PAY_PLATFORM_VALUES = Set.of(
+            "MOBILE_PAY",
+            "LINE_PAY",
+            "APPLE_PAY",
+            "GOOGLE_PAY",
+            "SAMSUNG_PAY",
+            "JKOPAY",
+            "ESUN_WALLET",
+            "全支付",
+            "街口支付",
+            "悠遊付",
+            "全盈_PAY",
+            "IPASS_MONEY",
+            "ICASH_PAY",
+            "TWQR"
     );
     private static final String CATHAY_CUBE_CARD_CODE = "CATHAY_CUBE";
     private static final String CUBE_DEFAULT_TIER = "LEVEL_1";
@@ -121,8 +140,8 @@ public class DecisionEngine {
             return false;
         }
 
-        String requestSubcategory = normalizeValue(request.getResolvedSubcategory());
-        String promoSubcategory = normalizeValue(promotion.getSubcategory());
+        String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
+        String promoSubcategory = normalizeSubcategoryForMatching(promotion.getSubcategory());
         boolean hasStrictSubcategory = !requestSubcategory.isBlank() && !"GENERAL".equals(requestSubcategory);
 
         if (hasStrictSubcategory) {
@@ -639,6 +658,11 @@ public class DecisionEngine {
         return value == null ? "" : value.trim().toUpperCase();
     }
 
+    private String normalizeSubcategoryForMatching(String subcategory) {
+        String normalized = normalizeValue(subcategory);
+        return "MOBILE_PAY".equals(normalized) ? "GENERAL" : normalized;
+    }
+
     private CardRecommendation toRecommendation(CardAggregate cardAggregate, boolean includePromotionBreakdown) {
         Promotion promotion = cardAggregate.primaryPromotion();
         List<PromotionCondition> recommendationConditions = buildRecommendationConditions(promotion);
@@ -792,24 +816,52 @@ public class DecisionEngine {
             return true;
         }
 
-        List<String> platformValues = conditions.stream()
-                .filter(c -> PLATFORM_CONDITION_TYPES.contains(normalizeValue(c.getType())))
+        List<String> merchantValues = conditions.stream()
+                .filter(c -> MERCHANT_CONDITION_TYPES.contains(normalizeValue(c.getType())))
                 .map(PromotionCondition::getValue)
                 .map(this::normalizeValue)
                 .filter(v -> !v.isBlank())
                 .toList();
 
-        if (platformValues.isEmpty()) {
-            return true;
-        }
-
-        String merchantName = request.getResolvedMerchantName();
-        if (merchantName == null || merchantName.isBlank()) {
+        String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
+        if (!merchantValues.isEmpty() && (normalizedMerchant.isBlank() || merchantValues.stream().noneMatch(normalizedMerchant::equals))) {
             return false;
         }
 
-        String normalizedMerchant = normalizeValue(merchantName);
-        return platformValues.stream().anyMatch(normalizedMerchant::equals);
+        List<String> paymentValues = conditions.stream()
+                .filter(c -> PAYMENT_CONDITION_TYPES.contains(normalizeValue(c.getType())))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
+                .filter(v -> !v.isBlank())
+                .toList();
+
+        if (paymentValues.isEmpty()) {
+            return true;
+        }
+
+        Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
+        if (!normalizedMerchant.isBlank()) {
+            normalizedPaymentMethods.add(normalizedMerchant);
+        }
+        if (normalizedPaymentMethods.isEmpty()) {
+            return false;
+        }
+
+        return paymentValues.stream().anyMatch(normalizedPaymentMethods::contains);
+    }
+
+    private Set<String> expandPaymentMethods(String paymentMethod) {
+        String normalizedPaymentMethod = normalizeValue(paymentMethod);
+        if (normalizedPaymentMethod.isBlank()) {
+            return new HashSet<>();
+        }
+
+        Set<String> values = new HashSet<>();
+        values.add(normalizedPaymentMethod);
+        if (MOBILE_PAY_PLATFORM_VALUES.contains(normalizedPaymentMethod)) {
+            values.add("MOBILE_PAY");
+        }
+        return values;
     }
 
     private boolean matchesExcludedConditions(Promotion promotion, RecommendationRequest request) {

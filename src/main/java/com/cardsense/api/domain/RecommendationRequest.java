@@ -88,6 +88,11 @@ public class RecommendationRequest {
     }
 
     @JsonIgnore
+    public String getResolvedPaymentMethod() {
+        return scenario != null ? scenario.getPaymentMethod() : null;
+    }
+
+    @JsonIgnore
     public RecommendationScenario toResolvedScenario() {
         RecommendationScenario baseScenario = scenario == null ? new RecommendationScenario() : scenario;
         return RecommendationScenario.builder()
