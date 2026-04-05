@@ -366,12 +366,62 @@ class DecisionEngineTest {
                 .anyMatch(condition -> "ASSUMED_BENEFIT_TIER".equals(condition.getType()) && "LEVEL_3".equals(condition.getValue())));
     }
 
+    @Test
+    void richartTierDefaultsToLevel1WhenRequestDoesNotSpecifyTier() {
+        Promotion richartPromo = buildPromotion("promo1", "ver1", "TAISHIN_RICHART", BigDecimal.valueOf(3.3), 500, LocalDate.of(2026, 6, 30));
+        richartPromo.setPlanId("TAISHIN_RICHART_DIGITAL");
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(richartPromo));
+        when(benefitPlanRepository.findByPlanId("TAISHIN_RICHART_DIGITAL")).thenReturn(activeRichartPlan("TAISHIN_RICHART_DIGITAL"));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 5))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(13, response.getRecommendations().get(0).getEstimatedReturn());
+        assertTrue(response.getRecommendations().get(0).getConditions().stream()
+                .anyMatch(condition -> "ASSUMED_BENEFIT_TIER".equals(condition.getType()) && "LEVEL_1".equals(condition.getValue())));
+    }
+
+    @Test
+    void richartTierCanUpgradeToLevel2ViaRuntimeState() {
+        Promotion richartPromo = buildPromotion("promo1", "ver1", "TAISHIN_RICHART", BigDecimal.valueOf(3.3), 500, LocalDate.of(2026, 6, 30));
+        richartPromo.setPlanId("TAISHIN_RICHART_DIGITAL");
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(richartPromo));
+        when(benefitPlanRepository.findByPlanId("TAISHIN_RICHART_DIGITAL")).thenReturn(activeRichartPlan("TAISHIN_RICHART_DIGITAL"));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .planRuntimeByCard(Map.of("TAISHIN_RICHART", Map.of("tier", "LEVEL_2")))
+                .date(LocalDate.of(2026, 4, 5))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(33, response.getRecommendations().get(0).getEstimatedReturn());
+    }
+
     private BenefitPlan activeCubePlan(String planId) {
         return BenefitPlan.builder()
                 .planId(planId)
                 .cardCode("CATHAY_CUBE")
                 .planName("Digital")
                 .exclusiveGroup("CATHAY_CUBE_PLANS")
+                .switchFrequency("DAILY")
+                .status("ACTIVE")
+                .validFrom(LocalDate.of(2026, 1, 1))
+                .validUntil(LocalDate.of(2026, 6, 30))
+                .build();
+    }
+
+    private BenefitPlan activeRichartPlan(String planId) {
+        return BenefitPlan.builder()
+                .planId(planId)
+                .cardCode("TAISHIN_RICHART")
+                .planName("Digital")
+                .exclusiveGroup("TAISHIN_RICHART_PLANS")
                 .switchFrequency("DAILY")
                 .status("ACTIVE")
                 .validFrom(LocalDate.of(2026, 1, 1))

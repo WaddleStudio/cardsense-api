@@ -62,15 +62,26 @@ public class DecisionEngine {
     );
     private static final String CATHAY_CUBE_CARD_CODE = "CATHAY_CUBE";
     private static final String ESUN_UNICARD_CARD_CODE = "ESUN_UNICARD";
+    private static final String TAISHIN_RICHART_CARD_CODE = "TAISHIN_RICHART";
     private static final String UNICARD_SIMPLE_PLAN_ID = "ESUN_UNICARD_SIMPLE";
     private static final String UNICARD_FLEXIBLE_PLAN_ID = "ESUN_UNICARD_FLEXIBLE";
     private static final String UNICARD_UP_PLAN_ID = "ESUN_UNICARD_UP";
     private static final String UNICARD_HUNDRED_STORE_MARKER = "UNICARD_HUNDRED_STORE_CATALOG";
     private static final String CUBE_DEFAULT_TIER = "LEVEL_1";
+    private static final String RICHART_DEFAULT_TIER = "LEVEL_1";
     private static final Set<String> CUBE_TIERED_PLAN_IDS = Set.of(
             "CATHAY_CUBE_DIGITAL",
             "CATHAY_CUBE_SHOPPING",
             "CATHAY_CUBE_TRAVEL"
+    );
+    private static final Set<String> RICHART_TIERED_PLAN_IDS = Set.of(
+            "TAISHIN_RICHART_PAY",
+            "TAISHIN_RICHART_DAILY",
+            "TAISHIN_RICHART_BIG",
+            "TAISHIN_RICHART_DINING",
+            "TAISHIN_RICHART_DIGITAL",
+            "TAISHIN_RICHART_TRAVEL",
+            "TAISHIN_RICHART_WEEKEND"
     );
 
     private final PromotionRepository promotionRepository;
@@ -256,6 +267,15 @@ public class DecisionEngine {
             promotion = runtimeAdjustedPromotion;
         }
 
+        runtimeAdjustedPromotion = applyCubeTierRuntimeAdjustments(promotion, request);
+        if (runtimeAdjustedPromotion != promotion) {
+            return runtimeAdjustedPromotion;
+        }
+
+        return applyRichartTierRuntimeAdjustments(promotion, request);
+    }
+
+    private Promotion applyCubeTierRuntimeAdjustments(Promotion promotion, RecommendationRequest request) {
         if (!CATHAY_CUBE_CARD_CODE.equals(normalizeValue(promotion.getCardCode()))) {
             return promotion;
         }
@@ -279,6 +299,69 @@ public class DecisionEngine {
                 .type("ASSUMED_BENEFIT_TIER")
                 .value(normalizedTier)
                 .label("依 CUBE 等級假設計算：" + normalizedTier)
+                .build());
+
+        return Promotion.builder()
+                .promoId(promotion.getPromoId())
+                .promoVersionId(promotion.getPromoVersionId())
+                .title(promotion.getTitle())
+                .cardCode(promotion.getCardCode())
+                .cardName(promotion.getCardName())
+                .cardStatus(promotion.getCardStatus())
+                .annualFee(promotion.getAnnualFee())
+                .applyUrl(promotion.getApplyUrl())
+                .bankCode(promotion.getBankCode())
+                .bankName(promotion.getBankName())
+                .category(promotion.getCategory())
+                .subcategory(promotion.getSubcategory())
+                .channel(promotion.getChannel())
+                .validFrom(promotion.getValidFrom())
+                .validUntil(promotion.getValidUntil())
+                .minAmount(promotion.getMinAmount())
+                .cashbackType(promotion.getCashbackType())
+                .cashbackValue(adjustedRate)
+                .maxCashback(promotion.getMaxCashback())
+                .frequencyLimit(promotion.getFrequencyLimit())
+                .requiresRegistration(promotion.isRequiresRegistration())
+                .recommendationScope(promotion.getRecommendationScope())
+                .eligibilityType(promotion.getEligibilityType())
+                .stackability(promotion.getStackability())
+                .conditions(adjustedConditions)
+                .excludedConditions(promotion.getExcludedConditions())
+                .status(promotion.getStatus())
+                .planId(promotion.getPlanId())
+                .build();
+    }
+
+    private Promotion applyRichartTierRuntimeAdjustments(Promotion promotion, RecommendationRequest request) {
+        if (!TAISHIN_RICHART_CARD_CODE.equals(normalizeValue(promotion.getCardCode()))) {
+            return promotion;
+        }
+
+        String normalizedPlanId = normalizeValue(promotion.getPlanId());
+        if (!RICHART_TIERED_PLAN_IDS.contains(normalizedPlanId)) {
+            return promotion;
+        }
+
+        BigDecimal currentRate = promotion.getCashbackValue();
+        if (currentRate == null) {
+            return promotion;
+        }
+
+        String normalizedTier = normalizeRichartTier(resolveRichartTier(request));
+        BigDecimal adjustedRate = richartAdjustedRate(normalizedPlanId, normalizedTier, currentRate);
+        if (adjustedRate == null || adjustedRate.compareTo(currentRate) == 0) {
+            return promotion;
+        }
+
+        List<PromotionCondition> adjustedConditions = new ArrayList<>();
+        if (promotion.getConditions() != null) {
+            adjustedConditions.addAll(promotion.getConditions());
+        }
+        adjustedConditions.add(PromotionCondition.builder()
+                .type("ASSUMED_BENEFIT_TIER")
+                .value(normalizedTier)
+                .label("Assumed Richart benefit tier: " + normalizedTier)
                 .build());
 
         return Promotion.builder()
@@ -400,12 +483,55 @@ public class DecisionEngine {
         return request.getResolvedBenefitPlanTier(CATHAY_CUBE_CARD_CODE);
     }
 
+    private String normalizeRichartTier(String rawTier) {
+        String normalized = normalizeValue(rawTier);
+        if ("LEVEL_2".equals(normalized) || "L2".equals(normalized)) {
+            return "LEVEL_2";
+        }
+        return RICHART_DEFAULT_TIER;
+    }
+
+    private String resolveRichartTier(RecommendationRequest request) {
+        String runtimeTier = request.getResolvedPlanRuntimeValue(TAISHIN_RICHART_CARD_CODE, "TIER");
+        if (runtimeTier != null && !runtimeTier.isBlank()) {
+            return runtimeTier;
+        }
+        return request.getResolvedBenefitPlanTier(TAISHIN_RICHART_CARD_CODE);
+    }
+
     private BigDecimal cubeTierRate(String normalizedTier) {
         return switch (normalizedTier) {
             case "LEVEL_2" -> BigDecimal.valueOf(3.0);
             case "LEVEL_3" -> BigDecimal.valueOf(3.3);
             default -> BigDecimal.valueOf(2.0);
         };
+    }
+
+    private BigDecimal richartAdjustedRate(String planId, String normalizedTier, BigDecimal currentRate) {
+        BigDecimal standardLevel1Rate = BigDecimal.valueOf(1.3);
+        BigDecimal standardLevel2Rate = switch (planId) {
+            case "TAISHIN_RICHART_PAY" -> null;
+            case "TAISHIN_RICHART_WEEKEND" -> BigDecimal.valueOf(2.0);
+            default -> BigDecimal.valueOf(3.3);
+        };
+
+        if ("TAISHIN_RICHART_PAY".equals(planId)) {
+            if (currentRate.compareTo(BigDecimal.valueOf(3.8)) == 0 || currentRate.compareTo(BigDecimal.valueOf(2.3)) == 0) {
+                return "LEVEL_2".equals(normalizedTier) ? currentRate : standardLevel1Rate;
+            }
+            if (currentRate.compareTo(standardLevel1Rate) == 0) {
+                return currentRate;
+            }
+            return null;
+        }
+
+        if (currentRate.compareTo(standardLevel1Rate) == 0) {
+            return currentRate;
+        }
+        if (standardLevel2Rate != null && currentRate.compareTo(standardLevel2Rate) == 0) {
+            return "LEVEL_2".equals(normalizedTier) ? standardLevel2Rate : standardLevel1Rate;
+        }
+        return null;
     }
 
     private BigDecimal unicardHundredStoreRate(String activePlanId) {
