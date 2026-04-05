@@ -505,7 +505,7 @@ public class DecisionEngineTest {
     }
 
     @Test
-    public void testRecommendSubcategoryQueryOnlyIncludesExactSubcategoryPromotions() {
+    public void testRecommendSubcategoryQueryIncludesMatchingSceneAndGeneralPromotions() {
         Promotion deliveryPromo = buildPromotion("promo1", "ver1", "CARD_DELIVERY", "外送神卡", "CTBC", "中國信託", BigDecimal.valueOf(10.0), null, 0, LocalDate.of(2026, 6, 30));
         deliveryPromo.setCategory("DINING");
         deliveryPromo.setSubcategory("DELIVERY");
@@ -527,9 +527,11 @@ public class DecisionEngineTest {
                 .date(LocalDate.now())
                 .build());
 
-        assertEquals(1, response.getRecommendations().size());
+        assertEquals(2, response.getRecommendations().size());
         assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
         assertEquals("DELIVERY", response.getRecommendations().get(0).getSubcategory());
+        assertEquals("promo3", response.getRecommendations().get(1).getPromotionId());
+        assertEquals("GENERAL", response.getRecommendations().get(1).getSubcategory());
     }
 
     @Test
@@ -573,6 +575,35 @@ public class DecisionEngineTest {
                 .build());
 
         assertTrue(response.getRecommendations().isEmpty());
+    }
+
+    @Test
+    public void testRecommendStacksGeneralAndSceneSpecificPromotionsForSameCard() {
+        Promotion generalPromo = buildPromotion("promo1", "ver1", "CARD_STACK", "Stack Card", "CTBC", "CTBC", BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        generalPromo.setCategory("DINING");
+        generalPromo.setSubcategory("GENERAL");
+        generalPromo.setStackability(stackability("ALWAYS_STACKABLE", null, null, null, List.of("ver2")));
+
+        Promotion deliveryPromo = buildPromotion("promo2", "ver2", "CARD_STACK", "Stack Card", "CTBC", "CTBC", BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        deliveryPromo.setCategory("DINING");
+        deliveryPromo.setSubcategory("DELIVERY");
+        deliveryPromo.setStackability(stackability("ALWAYS_STACKABLE", null, null, null, List.of("ver1")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(generalPromo, deliveryPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("DINING")
+                .subcategory("DELIVERY")
+                .date(LocalDate.now())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(80, response.getRecommendations().get(0).getEstimatedReturn());
+        assertEquals(2, response.getRecommendations().get(0).getMatchedPromotionCount());
+        assertEquals(2, response.getRecommendations().get(0).getPromotionBreakdown().stream()
+                .filter(item -> Boolean.TRUE.equals(item.getContributesToCardTotal()))
+                .count());
     }
 
     @Test

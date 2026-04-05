@@ -126,7 +126,9 @@ public class DecisionEngine {
         boolean hasStrictSubcategory = !requestSubcategory.isBlank() && !"GENERAL".equals(requestSubcategory);
 
         if (hasStrictSubcategory) {
-            if (!requestSubcategory.equals(promoSubcategory)) {
+            if (!promoSubcategory.isBlank()
+                    && !"GENERAL".equals(promoSubcategory)
+                    && !requestSubcategory.equals(promoSubcategory)) {
                 return false;
             }
         } else if (!"GENERAL".equals(promoSubcategory) && !promoSubcategory.isBlank()) {
