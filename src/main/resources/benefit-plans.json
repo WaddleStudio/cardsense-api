@@ -34,7 +34,7 @@
     "bankCode": "CATHAY",
     "cardCode": "CATHAY_CUBE",
     "planName": "趣旅行",
-    "planDescription": "適合海外消費、交通、航空、訂房平台與旅行社",
+    "planDescription": "適合海外實體消費、交通、航空、線上旅遊平台與旅行社",
     "switchFrequency": "DAILY",
     "switchMaxPerMonth": null,
     "requiresSubscription": false,
