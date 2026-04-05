@@ -46,6 +46,10 @@ public class RecommendationRequest {
     @JsonAlias("benefit_plan_tiers")
     private Map<String, String> benefitPlanTiers;
 
+    private Map<String, String> activePlansByCard;
+
+    private Map<String, Map<String, String>> planRuntimeByCard;
+
     @JsonIgnore
     public Integer getResolvedAmount() {
         return scenario != null && scenario.getAmount() != null ? scenario.getAmount() : amount;
@@ -161,6 +165,63 @@ public class RecommendationRequest {
             return null;
         }
         return getResolvedBenefitPlanTiers().get(cardCode.trim().toUpperCase());
+    }
+
+    @JsonIgnore
+    public Map<String, String> getResolvedActivePlansByCard() {
+        if (activePlansByCard == null || activePlansByCard.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return activePlansByCard.entrySet().stream()
+                .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
+                .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
+                .collect(Collectors.toUnmodifiableMap(
+                        entry -> entry.getKey().trim().toUpperCase(),
+                        entry -> entry.getValue().trim().toUpperCase(),
+                        (left, right) -> right
+                ));
+    }
+
+    @JsonIgnore
+    public String getResolvedActivePlanId(String cardCode) {
+        if (cardCode == null || cardCode.isBlank()) {
+            return null;
+        }
+        return getResolvedActivePlansByCard().get(cardCode.trim().toUpperCase());
+    }
+
+    @JsonIgnore
+    public Map<String, Map<String, String>> getResolvedPlanRuntimeByCard() {
+        if (planRuntimeByCard == null || planRuntimeByCard.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return planRuntimeByCard.entrySet().stream()
+                .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
+                .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
+                .collect(Collectors.toUnmodifiableMap(
+                        entry -> entry.getKey().trim().toUpperCase(),
+                        entry -> entry.getValue().entrySet().stream()
+                                .filter(runtimeEntry -> runtimeEntry.getKey() != null && !runtimeEntry.getKey().isBlank())
+                                .filter(runtimeEntry -> runtimeEntry.getValue() != null && !runtimeEntry.getValue().isBlank())
+                                .collect(Collectors.toUnmodifiableMap(
+                                        runtimeEntry -> runtimeEntry.getKey().trim().toUpperCase(),
+                                        runtimeEntry -> runtimeEntry.getValue().trim().toUpperCase(),
+                                        (left, right) -> right
+                                )),
+                        (left, right) -> right
+                ));
+    }
+
+    @JsonIgnore
+    public String getResolvedPlanRuntimeValue(String cardCode, String runtimeKey) {
+        if (cardCode == null || cardCode.isBlank() || runtimeKey == null || runtimeKey.isBlank()) {
+            return null;
+        }
+        Map<String, String> runtime = getResolvedPlanRuntimeByCard().get(cardCode.trim().toUpperCase());
+        if (runtime == null || runtime.isEmpty()) {
+            return null;
+        }
+        return runtime.get(runtimeKey.trim().toUpperCase());
     }
 
     @AssertTrue(message = "Scenario amount is required and must be non-negative")

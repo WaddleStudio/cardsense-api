@@ -61,6 +61,11 @@ public class DecisionEngine {
             "TWQR"
     );
     private static final String CATHAY_CUBE_CARD_CODE = "CATHAY_CUBE";
+    private static final String ESUN_UNICARD_CARD_CODE = "ESUN_UNICARD";
+    private static final String UNICARD_SIMPLE_PLAN_ID = "ESUN_UNICARD_SIMPLE";
+    private static final String UNICARD_FLEXIBLE_PLAN_ID = "ESUN_UNICARD_FLEXIBLE";
+    private static final String UNICARD_UP_PLAN_ID = "ESUN_UNICARD_UP";
+    private static final String UNICARD_HUNDRED_STORE_MARKER = "UNICARD_HUNDRED_STORE_CATALOG";
     private static final String CUBE_DEFAULT_TIER = "LEVEL_1";
     private static final Set<String> CUBE_TIERED_PLAN_IDS = Set.of(
             "CATHAY_CUBE_DIGITAL",
@@ -124,7 +129,7 @@ public class DecisionEngine {
             return false;
         }
 
-        if (!isRecommendationScopeEligible(promotion)) {
+        if (!isRecommendationScopeEligible(promotion, request)) {
             return false;
         }
 
@@ -208,11 +213,15 @@ public class DecisionEngine {
         return !hasExhaustedBenefit(promotion, request);
     }
 
-    private boolean isRecommendationScopeEligible(Promotion promotion) {
+    private boolean isRecommendationScopeEligible(Promotion promotion, RecommendationRequest request) {
         String recommendationScope = promotion.getRecommendationScope();
-        return recommendationScope == null
+        if (recommendationScope == null
                 || recommendationScope.isBlank()
-                || "RECOMMENDABLE".equalsIgnoreCase(recommendationScope);
+                || "RECOMMENDABLE".equalsIgnoreCase(recommendationScope)) {
+            return true;
+        }
+
+        return isRuntimeRecommendableCatalogPromotion(promotion, request);
     }
 
     private boolean isEligibilityTypeEligible(Promotion promotion, RecommendationRequest request) {
@@ -242,6 +251,11 @@ public class DecisionEngine {
     }
 
     private Promotion applyRuntimeAdjustments(Promotion promotion, RecommendationRequest request) {
+        Promotion runtimeAdjustedPromotion = applyUnicardHundredStoreRuntimeAdjustments(promotion, request);
+        if (runtimeAdjustedPromotion != promotion) {
+            promotion = runtimeAdjustedPromotion;
+        }
+
         if (!CATHAY_CUBE_CARD_CODE.equals(normalizeValue(promotion.getCardCode()))) {
             return promotion;
         }
@@ -251,7 +265,7 @@ public class DecisionEngine {
             return promotion;
         }
 
-        String normalizedTier = normalizeCubeTier(request.getResolvedBenefitPlanTier(CATHAY_CUBE_CARD_CODE));
+        String normalizedTier = normalizeCubeTier(resolveCubeTier(request));
         BigDecimal adjustedRate = cubeTierRate(normalizedTier);
         if (adjustedRate == null || adjustedRate.compareTo(promotion.getCashbackValue()) == 0) {
             return promotion;
@@ -299,6 +313,74 @@ public class DecisionEngine {
                 .build();
     }
 
+    private Promotion applyUnicardHundredStoreRuntimeAdjustments(Promotion promotion, RecommendationRequest request) {
+        if (!isUnicardHundredStorePromotion(promotion)) {
+            return promotion;
+        }
+
+        String activePlanId = normalizeValue(request.getResolvedActivePlanId(ESUN_UNICARD_CARD_CODE));
+        if (activePlanId.isBlank()) {
+            return promotion;
+        }
+
+        BigDecimal adjustedRate = unicardHundredStoreRate(activePlanId);
+        if (adjustedRate == null) {
+            return promotion;
+        }
+
+        List<PromotionCondition> adjustedConditions = new ArrayList<>();
+        if (promotion.getConditions() != null) {
+            adjustedConditions.addAll(promotion.getConditions());
+        }
+        adjustedConditions.add(PromotionCondition.builder()
+                .type("ASSUMED_ACTIVE_PLAN")
+                .value(activePlanId)
+                .label("依目前方案計算：" + activePlanId)
+                .build());
+
+        if (UNICARD_FLEXIBLE_PLAN_ID.equals(activePlanId)) {
+            List<String> selectedMerchants = getSelectedUnicardFlexibleMerchants(request);
+            if (!selectedMerchants.isEmpty()) {
+                adjustedConditions.add(PromotionCondition.builder()
+                        .type("ASSUMED_SELECTED_MERCHANTS")
+                        .value(String.join(",", selectedMerchants))
+                        .label("任意選已選商家：" + String.join("、", selectedMerchants))
+                        .build());
+            }
+        }
+
+        return Promotion.builder()
+                .promoId(promotion.getPromoId())
+                .promoVersionId(promotion.getPromoVersionId())
+                .title(promotion.getTitle())
+                .cardCode(promotion.getCardCode())
+                .cardName(promotion.getCardName())
+                .cardStatus(promotion.getCardStatus())
+                .annualFee(promotion.getAnnualFee())
+                .applyUrl(promotion.getApplyUrl())
+                .bankCode(promotion.getBankCode())
+                .bankName(promotion.getBankName())
+                .category(promotion.getCategory())
+                .subcategory(promotion.getSubcategory())
+                .channel(promotion.getChannel())
+                .validFrom(promotion.getValidFrom())
+                .validUntil(promotion.getValidUntil())
+                .minAmount(promotion.getMinAmount())
+                .cashbackType(promotion.getCashbackType())
+                .cashbackValue(adjustedRate)
+                .maxCashback(promotion.getMaxCashback())
+                .frequencyLimit(promotion.getFrequencyLimit())
+                .requiresRegistration(promotion.isRequiresRegistration())
+                .recommendationScope("RECOMMENDABLE")
+                .eligibilityType(promotion.getEligibilityType())
+                .stackability(promotion.getStackability())
+                .conditions(adjustedConditions)
+                .excludedConditions(promotion.getExcludedConditions())
+                .status(promotion.getStatus())
+                .planId(activePlanId)
+                .build();
+    }
+
     private String normalizeCubeTier(String rawTier) {
         String normalized = normalizeValue(rawTier);
         if ("LEVEL_2".equals(normalized) || "L2".equals(normalized)) {
@@ -310,12 +392,79 @@ public class DecisionEngine {
         return CUBE_DEFAULT_TIER;
     }
 
+    private String resolveCubeTier(RecommendationRequest request) {
+        String runtimeTier = request.getResolvedPlanRuntimeValue(CATHAY_CUBE_CARD_CODE, "TIER");
+        if (runtimeTier != null && !runtimeTier.isBlank()) {
+            return runtimeTier;
+        }
+        return request.getResolvedBenefitPlanTier(CATHAY_CUBE_CARD_CODE);
+    }
+
     private BigDecimal cubeTierRate(String normalizedTier) {
         return switch (normalizedTier) {
             case "LEVEL_2" -> BigDecimal.valueOf(3.0);
             case "LEVEL_3" -> BigDecimal.valueOf(3.3);
             default -> BigDecimal.valueOf(2.0);
         };
+    }
+
+    private BigDecimal unicardHundredStoreRate(String activePlanId) {
+        return switch (activePlanId) {
+            case UNICARD_SIMPLE_PLAN_ID -> BigDecimal.valueOf(3.0);
+            case UNICARD_FLEXIBLE_PLAN_ID -> BigDecimal.valueOf(3.5);
+            case UNICARD_UP_PLAN_ID -> BigDecimal.valueOf(4.5);
+            default -> null;
+        };
+    }
+
+    private boolean isRuntimeRecommendableCatalogPromotion(Promotion promotion, RecommendationRequest request) {
+        if (!isUnicardHundredStorePromotion(promotion)) {
+            return false;
+        }
+
+        String activePlanId = normalizeValue(request.getResolvedActivePlanId(ESUN_UNICARD_CARD_CODE));
+        if (activePlanId.isBlank()) {
+            return false;
+        }
+
+        if (!List.of(UNICARD_SIMPLE_PLAN_ID, UNICARD_FLEXIBLE_PLAN_ID, UNICARD_UP_PLAN_ID).contains(activePlanId)) {
+            return false;
+        }
+
+        if (!UNICARD_FLEXIBLE_PLAN_ID.equals(activePlanId)) {
+            return true;
+        }
+
+        return hasMatchingSelectedFlexibleMerchant(promotion, request);
+    }
+
+    private boolean hasMatchingSelectedFlexibleMerchant(Promotion promotion, RecommendationRequest request) {
+        List<String> selectedMerchants = getSelectedUnicardFlexibleMerchants(request);
+        if (selectedMerchants.isEmpty()) {
+            return false;
+        }
+
+        List<String> merchantTokens = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
+        return merchantTokens.stream().anyMatch(selectedMerchants::contains);
+    }
+
+    private List<String> getSelectedUnicardFlexibleMerchants(RecommendationRequest request) {
+        String rawSelectedMerchants = request.getResolvedPlanRuntimeValue(ESUN_UNICARD_CARD_CODE, "SELECTED_MERCHANTS");
+        if (rawSelectedMerchants == null || rawSelectedMerchants.isBlank()) {
+            return List.of();
+        }
+
+        return java.util.Arrays.stream(rawSelectedMerchants.split("[,\\n]"))
+                .map(this::normalizeValue)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private boolean isUnicardHundredStorePromotion(Promotion promotion) {
+        return ESUN_UNICARD_CARD_CODE.equals(normalizeValue(promotion.getCardCode()))
+                && getNormalizedConditionValues(promotion, Set.of("TEXT")).stream()
+                .anyMatch(UNICARD_HUNDRED_STORE_MARKER::equals);
     }
 
     private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {
@@ -351,7 +500,7 @@ public class DecisionEngine {
         List<String> notes = new ArrayList<>();
 
         // Resolve best plan before stack resolution
-        PlanResolution planResolution = resolveBestPlan(promotions, requestDate);
+        PlanResolution planResolution = resolveBestPlan(promotions, requestDate, request);
         List<ScoredPromotion> effectivePromotions = planResolution.promotions();
         if (effectivePromotions.isEmpty()) {
             return null;
@@ -409,7 +558,7 @@ public class DecisionEngine {
     }
 
     private boolean hasMatchingMerchantCondition(Promotion promotion, String normalizedMerchant) {
-        return getNormalizedConditionValues(promotion, MERCHANT_CONDITION_TYPES).stream()
+        return getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES).stream()
                 .anyMatch(normalizedMerchant::equals);
     }
 
@@ -426,10 +575,13 @@ public class DecisionEngine {
                 .anyMatch(normalizedPaymentMethods::contains);
     }
 
-    private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions, LocalDate requestDate) {
+    private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions, LocalDate requestDate, RecommendationRequest request) {
         List<ScoredPromotion> traditional = promotions.stream()
                 .filter(sp -> sp.promotion().getPlanId() == null || sp.promotion().getPlanId().isBlank())
                 .toList();
+
+        String cardCode = promotions.isEmpty() ? null : promotions.get(0).promotion().getCardCode();
+        BenefitPlan requestedActivePlan = resolveRequestedActivePlan(cardCode, requestDate, request);
 
         List<ScoredPromotion> planBound = promotions.stream()
                 .filter(sp -> sp.promotion().getPlanId() != null && !sp.promotion().getPlanId().isBlank())
@@ -440,7 +592,18 @@ public class DecisionEngine {
                 .toList();
 
         if (planBound.isEmpty()) {
-            return new PlanResolution(traditional, null);
+            return new PlanResolution(traditional, requestedActivePlan);
+        }
+
+        if (requestedActivePlan != null) {
+            String requestedPlanId = normalizeValue(requestedActivePlan.getPlanId());
+            List<ScoredPromotion> selectedPlanPromotions = planBound.stream()
+                    .filter(sp -> requestedPlanId.equals(normalizeValue(sp.promotion().getPlanId())))
+                    .toList();
+
+            List<ScoredPromotion> combined = new ArrayList<>(traditional);
+            combined.addAll(selectedPlanPromotions);
+            return new PlanResolution(combined, requestedActivePlan);
         }
 
         // Group plan-bound promotions by exclusiveGroup, then by planId within each group
@@ -490,6 +653,24 @@ public class DecisionEngine {
         combined.addAll(winningPlanPromotions);
 
         return new PlanResolution(combined, winningPlan);
+    }
+
+    private BenefitPlan resolveRequestedActivePlan(String cardCode, LocalDate requestDate, RecommendationRequest request) {
+        String requestedPlanId = request.getResolvedActivePlanId(cardCode);
+        if (requestedPlanId == null || requestedPlanId.isBlank()) {
+            return null;
+        }
+
+        BenefitPlan requestedPlan = benefitPlanRepository.findByPlanId(requestedPlanId);
+        if (requestedPlan == null || !isPlanActiveOn(requestedPlan, requestDate)) {
+            return null;
+        }
+
+        if (!normalizeValue(cardCode).equals(normalizeValue(requestedPlan.getCardCode()))) {
+            return null;
+        }
+
+        return requestedPlan;
     }
 
     private boolean isPlanActiveOn(BenefitPlan plan, LocalDate requestDate) {
@@ -864,7 +1045,7 @@ public class DecisionEngine {
 
     private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
         String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
-        List<String> merchantValues = getNormalizedConditionValues(promotion, MERCHANT_CONDITION_TYPES);
+        List<String> merchantValues = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
         if (!merchantValues.isEmpty() && (normalizedMerchant.isBlank() || merchantValues.stream().noneMatch(normalizedMerchant::equals))) {
             return false;
         }
@@ -896,6 +1077,21 @@ public class DecisionEngine {
                 .map(PromotionCondition::getValue)
                 .map(this::normalizeValue)
                 .filter(value -> !value.isBlank())
+                .toList();
+    }
+
+    private List<String> getNormalizedConditionTokens(Promotion promotion, Set<String> allowedTypes) {
+        List<PromotionCondition> conditions = promotion.getConditions();
+        if (conditions == null || conditions.isEmpty()) {
+            return List.of();
+        }
+
+        return conditions.stream()
+                .filter(condition -> allowedTypes.contains(normalizeValue(condition.getType())))
+                .flatMap(condition -> java.util.stream.Stream.of(condition.getValue(), condition.getLabel()))
+                .map(this::normalizeValue)
+                .filter(value -> !value.isBlank())
+                .distinct()
                 .toList();
     }
 

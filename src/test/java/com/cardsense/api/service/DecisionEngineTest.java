@@ -146,6 +146,28 @@ class DecisionEngineTest {
     }
 
     @Test
+    void recommendMatchesMerchantConditionByLocalizedLabel() {
+        Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(4.5), 500, LocalDate.of(2026, 6, 30));
+        promo.setCategory("SHOPPING");
+        promo.setSubcategory("SPORTING_GOODS");
+        promo.setConditions(List.of(condition("RETAIL_CHAIN", "DECATHLON", "迪卡儂")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("SHOPPING")
+                        .subcategory("SPORTING_GOODS")
+                        .merchantName("迪卡儂")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
+    }
+
+    @Test
     void recommendMatchesPaymentPlatformConditionViaPaymentMethod() {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
         promo.setConditions(List.of(condition("PAYMENT_PLATFORM", "LINE_PAY", "LINE Pay")));

@@ -16,6 +16,7 @@ import org.mockito.Mockito;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -226,6 +227,104 @@ public class DecisionEngineBenefitPlanTest {
         assertNotNull(rec.getActivePlan());
         assertEquals("CATHAY_CUBE_BIRTHDAY", rec.getActivePlan().getPlanId());
         assertEquals(50, rec.getEstimatedReturn());
+    }
+
+    @Test
+    public void testUserSelectedActivePlanOverridesAutoBestPlan() {
+        Promotion digitalPromo = buildPromotion("d1", "d_ver1", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        digitalPromo.setPlanId("CATHAY_CUBE_DIGITAL");
+
+        Promotion shoppingPromo = buildPromotion("s1", "s_ver1", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(5.0), 500, 0, LocalDate.of(2026, 6, 30));
+        shoppingPromo.setPlanId("CATHAY_CUBE_SHOPPING");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(digitalPromo, shoppingPromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(
+                buildPlan("CATHAY_CUBE_DIGITAL", "CATHAY_CUBE", "Digital", "CATHAY_CUBE_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "DAILY")
+        );
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_SHOPPING")).thenReturn(
+                buildPlan("CATHAY_CUBE_SHOPPING", "CATHAY_CUBE", "Shopping", "CATHAY_CUBE_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "DAILY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 3, 15))
+                .activePlansByCard(Map.of("CATHAY_CUBE", "CATHAY_CUBE_DIGITAL"))
+                .planRuntimeByCard(Map.of("CATHAY_CUBE", Map.of("tier", "LEVEL_2")))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNotNull(rec.getActivePlan());
+        assertEquals("CATHAY_CUBE_DIGITAL", rec.getActivePlan().getPlanId());
+        assertEquals(30, rec.getEstimatedReturn());
+    }
+
+    @Test
+    public void testCubeTierCanBeReadFromPlanRuntimeState() {
+        Promotion cubePromo = buildPromotion("promo1", "ver1", "CATHAY_CUBE", "Cube", "CATHAY", "Cathay",
+                BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
+        cubePromo.setPlanId("CATHAY_CUBE_DIGITAL");
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(cubePromo));
+        when(benefitPlanRepository.findByPlanId("CATHAY_CUBE_DIGITAL")).thenReturn(
+                buildPlan("CATHAY_CUBE_DIGITAL", "CATHAY_CUBE", "Digital", "CATHAY_CUBE_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "DAILY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 3, 15))
+                .planRuntimeByCard(Map.of("CATHAY_CUBE", Map.of("tier", "LEVEL_3")))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals(33, response.getRecommendations().get(0).getEstimatedReturn());
+        assertTrue(response.getRecommendations().get(0).getConditions().stream()
+                .anyMatch(condition -> "ASSUMED_BENEFIT_TIER".equals(condition.getType()) && "LEVEL_3".equals(condition.getValue())));
+    }
+
+    @Test
+    public void testUnicardHundredStoreCatalogPromotionBecomesRecommendableWithExplicitRuntimeState() {
+        Promotion unicardPromo = buildPromotion("u_hundred", "u_hundred_v1", "ESUN_UNICARD", "Unicard", "ESUN", "E.SUN",
+                BigDecimal.valueOf(4.5), 500, 0, LocalDate.of(2026, 6, 30));
+        unicardPromo.setCategory("SHOPPING");
+        unicardPromo.setSubcategory("SPORTING_GOODS");
+        unicardPromo.setRecommendationScope("CATALOG_ONLY");
+        unicardPromo.setConditions(List.of(
+                condition("TEXT", "UNICARD_HUNDRED_STORE_CATALOG", "百大指定消費"),
+                condition("RETAIL_CHAIN", "DECATHLON", "迪卡儂")
+        ));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(unicardPromo));
+        when(benefitPlanRepository.findByPlanId("ESUN_UNICARD_FLEXIBLE")).thenReturn(
+                buildPlan("ESUN_UNICARD_FLEXIBLE", "ESUN_UNICARD", "Flexible", "ESUN_UNICARD_PLANS",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30), "MONTHLY")
+        );
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("SHOPPING")
+                        .subcategory("SPORTING_GOODS")
+                        .merchantName("DECATHLON")
+                        .date(LocalDate.of(2026, 3, 15))
+                        .build())
+                .activePlansByCard(Map.of("ESUN_UNICARD", "ESUN_UNICARD_FLEXIBLE"))
+                .planRuntimeByCard(Map.of("ESUN_UNICARD", Map.of("selected_merchants", "DECATHLON")))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        var rec = response.getRecommendations().get(0);
+        assertNotNull(rec.getActivePlan());
+        assertEquals("ESUN_UNICARD_FLEXIBLE", rec.getActivePlan().getPlanId());
+        assertEquals(35, rec.getEstimatedReturn());
+        assertTrue(rec.getConditions().stream()
+                .anyMatch(condition -> "ASSUMED_ACTIVE_PLAN".equals(condition.getType()) && "ESUN_UNICARD_FLEXIBLE".equals(condition.getValue())));
     }
 
     @Test
