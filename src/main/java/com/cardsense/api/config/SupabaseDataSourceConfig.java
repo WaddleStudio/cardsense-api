@@ -38,6 +38,12 @@ public class SupabaseDataSourceConfig {
         config.setMinimumIdle(1);
         config.setConnectionTimeout(5000);
         config.setPoolName("supabase-pool");
+        // Supabase pooler / PgBouncer transaction pooling is incompatible with
+        // PostgreSQL JDBC server-side prepared statements. Disable them to avoid
+        // "prepared statement \"S_n\" already exists" errors in production.
+        config.addDataSourceProperty("prepareThreshold", "0");
+        config.addDataSourceProperty("preparedStatementCacheQueries", "0");
+        config.addDataSourceProperty("preferQueryMode", "simple");
         return new HikariDataSource(config);
     }
 
