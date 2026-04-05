@@ -184,7 +184,7 @@ class DecisionEngineTest {
     }
 
     @Test
-    void recommendSubcategoryQueryIncludesMatchingSceneAndGeneralPromotions() {
+    void recommendSubcategoryQueryRequiresAtLeastOneExactScenePromotionPerCard() {
         Promotion deliveryPromo = buildPromotion("promo1", "ver1", "CARD_DELIVERY", BigDecimal.valueOf(10.0), 500, LocalDate.of(2026, 6, 30));
         deliveryPromo.setCategory("DINING");
         deliveryPromo.setSubcategory("DELIVERY");
@@ -206,9 +206,35 @@ class DecisionEngineTest {
                 .date(LocalDate.of(2026, 4, 5))
                 .build());
 
-        assertEquals(2, response.getRecommendations().size());
+        assertEquals(1, response.getRecommendations().size());
         assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
-        assertEquals("promo3", response.getRecommendations().get(1).getPromotionId());
+    }
+
+    @Test
+    void recommendMerchantScopedQueryExcludesCardsWithoutMerchantScopedPromotion() {
+        Promotion merchantPromo = buildPromotion("promo1", "ver1", "CARD_MERCHANT", BigDecimal.valueOf(8.0), 500, LocalDate.of(2026, 6, 30));
+        merchantPromo.setCategory("ONLINE");
+        merchantPromo.setSubcategory("GENERAL");
+        merchantPromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "PCHOME_24H", "PChome 24h")));
+
+        Promotion genericPromo = buildPromotion("promo2", "ver2", "CARD_GENERIC", BigDecimal.valueOf(10.0), 500, LocalDate.of(2026, 6, 30));
+        genericPromo.setCategory("ONLINE");
+        genericPromo.setSubcategory("GENERAL");
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(merchantPromo, genericPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .subcategory("ECOMMERCE")
+                        .merchantName("PCHOME_24H")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo1", response.getRecommendations().get(0).getPromotionId());
     }
 
     @Test

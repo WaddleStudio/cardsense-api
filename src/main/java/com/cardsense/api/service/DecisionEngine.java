@@ -90,7 +90,7 @@ public class DecisionEngine {
         List<CardAggregate> rankedCards = scoredPromotions.stream()
                 .collect(Collectors.groupingBy(this::distinctCardKey, LinkedHashMap::new, Collectors.toList()))
                 .values().stream()
-                .map(promos -> toCardAggregate(promos, requestDate))
+                .map(promos -> toCardAggregate(promos, requestDate, request))
                 .filter(Objects::nonNull)
                 .sorted(cardAggregateComparator())
                 .toList();
@@ -347,7 +347,7 @@ public class DecisionEngine {
                 .thenComparing(cardAggregate -> cardAggregate.primaryPromotion().getPromoVersionId(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
     }
 
-    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions, LocalDate requestDate) {
+    private CardAggregate toCardAggregate(List<ScoredPromotion> promotions, LocalDate requestDate, RecommendationRequest request) {
         List<String> notes = new ArrayList<>();
 
         // Resolve best plan before stack resolution
@@ -362,6 +362,11 @@ public class DecisionEngine {
         if (contributingPromotions.isEmpty()) {
             return null;
         }
+
+        if (requiresStrictSceneMatch(request)
+                && effectivePromotions.stream().map(ScoredPromotion::promotion).noneMatch(promotion -> isStrictSceneMatch(promotion, request))) {
+            return null;
+        }
         notes.addAll(resolution.notes());
 
         if (planResolution.winningPlan() != null) {
@@ -372,6 +377,53 @@ public class DecisionEngine {
         int totalReturn = contributingPromotions.stream().mapToInt(ScoredPromotion::cappedReturn).sum();
 
         return new CardAggregate(primary.promotion(), promotions, contributingPromotions, totalReturn, notes, planResolution.winningPlan());
+    }
+
+    private boolean requiresStrictSceneMatch(RecommendationRequest request) {
+        return !normalizeSubcategoryForMatching(request.getResolvedSubcategory()).isBlank()
+                && !"GENERAL".equals(normalizeSubcategoryForMatching(request.getResolvedSubcategory()))
+                || !normalizeValue(request.getResolvedMerchantName()).isBlank()
+                || !normalizeValue(request.getResolvedPaymentMethod()).isBlank();
+    }
+
+    private boolean isStrictSceneMatch(Promotion promotion, RecommendationRequest request) {
+        String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
+        String normalizedPaymentMethod = normalizeValue(request.getResolvedPaymentMethod());
+        String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
+        boolean hasMerchantOrPaymentConstraint = !normalizedMerchant.isBlank() || !normalizedPaymentMethod.isBlank();
+
+        if (!normalizedMerchant.isBlank() && !hasMatchingMerchantCondition(promotion, normalizedMerchant)) {
+            return false;
+        }
+
+        if (!normalizedPaymentMethod.isBlank() && !hasMatchingPaymentCondition(promotion, normalizedPaymentMethod, normalizedMerchant)) {
+            return false;
+        }
+
+        if (!hasMerchantOrPaymentConstraint && !requestSubcategory.isBlank() && !"GENERAL".equals(requestSubcategory)) {
+            String promoSubcategory = normalizeSubcategoryForMatching(promotion.getSubcategory());
+            return requestSubcategory.equals(promoSubcategory);
+        }
+
+        return true;
+    }
+
+    private boolean hasMatchingMerchantCondition(Promotion promotion, String normalizedMerchant) {
+        return getNormalizedConditionValues(promotion, MERCHANT_CONDITION_TYPES).stream()
+                .anyMatch(normalizedMerchant::equals);
+    }
+
+    private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod, String normalizedMerchant) {
+        Set<String> normalizedPaymentMethods = expandPaymentMethods(normalizedPaymentMethod);
+        if (!normalizedMerchant.isBlank()) {
+            normalizedPaymentMethods.add(normalizedMerchant);
+        }
+        if (normalizedPaymentMethods.isEmpty()) {
+            return false;
+        }
+
+        return getNormalizedConditionValues(promotion, PAYMENT_CONDITION_TYPES).stream()
+                .anyMatch(normalizedPaymentMethods::contains);
     }
 
     private PlanResolution resolveBestPlan(List<ScoredPromotion> promotions, LocalDate requestDate) {
@@ -811,30 +863,13 @@ public class DecisionEngine {
     }
 
     private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
-        List<PromotionCondition> conditions = promotion.getConditions();
-        if (conditions == null || conditions.isEmpty()) {
-            return true;
-        }
-
-        List<String> merchantValues = conditions.stream()
-                .filter(c -> MERCHANT_CONDITION_TYPES.contains(normalizeValue(c.getType())))
-                .map(PromotionCondition::getValue)
-                .map(this::normalizeValue)
-                .filter(v -> !v.isBlank())
-                .toList();
-
         String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
+        List<String> merchantValues = getNormalizedConditionValues(promotion, MERCHANT_CONDITION_TYPES);
         if (!merchantValues.isEmpty() && (normalizedMerchant.isBlank() || merchantValues.stream().noneMatch(normalizedMerchant::equals))) {
             return false;
         }
 
-        List<String> paymentValues = conditions.stream()
-                .filter(c -> PAYMENT_CONDITION_TYPES.contains(normalizeValue(c.getType())))
-                .map(PromotionCondition::getValue)
-                .map(this::normalizeValue)
-                .filter(v -> !v.isBlank())
-                .toList();
-
+        List<String> paymentValues = getNormalizedConditionValues(promotion, PAYMENT_CONDITION_TYPES);
         if (paymentValues.isEmpty()) {
             return true;
         }
@@ -848,6 +883,20 @@ public class DecisionEngine {
         }
 
         return paymentValues.stream().anyMatch(normalizedPaymentMethods::contains);
+    }
+
+    private List<String> getNormalizedConditionValues(Promotion promotion, Set<String> allowedTypes) {
+        List<PromotionCondition> conditions = promotion.getConditions();
+        if (conditions == null || conditions.isEmpty()) {
+            return List.of();
+        }
+
+        return conditions.stream()
+                .filter(condition -> allowedTypes.contains(normalizeValue(condition.getType())))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
+                .filter(value -> !value.isBlank())
+                .toList();
     }
 
     private Set<String> expandPaymentMethods(String paymentMethod) {
