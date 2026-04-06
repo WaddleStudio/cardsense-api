@@ -146,6 +146,23 @@ class DecisionEngineTest {
     }
 
     @Test
+    void recommendFlagsGeneralRewardOnlyCards() {
+        Promotion promo = buildPromotion("promo-general", "ver-general", "CARD_A", BigDecimal.valueOf(3.0), 300, LocalDate.of(2026, 6, 30));
+        promo.setSubcategory("GENERAL");
+        promo.setConditions(List.of());
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 5))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertTrue(response.getRecommendations().get(0).isGeneralRewardOnly());
+    }
+
+    @Test
     void recommendMatchesMerchantConditionByLocalizedLabel() {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(4.5), 500, LocalDate.of(2026, 6, 30));
         promo.setCategory("SHOPPING");

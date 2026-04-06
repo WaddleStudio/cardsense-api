@@ -31,4 +31,5 @@ public class CardRecommendation {
     private List<PromotionRewardBreakdown> promotionBreakdown;
     private String applyUrl;
     private ActivePlan activePlan;
+    private boolean generalRewardOnly;
 }

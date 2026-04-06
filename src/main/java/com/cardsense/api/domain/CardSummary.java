@@ -23,4 +23,12 @@ public class CardSummary {
     private String eligibilityType;
     private List<String> availableCategories;
     private boolean hasBenefitPlans;
+    private Integer totalPromotionCount;
+    private Integer recommendablePromotionCount;
+    private Integer catalogOnlyPromotionCount;
+    private Integer futureScopePromotionCount;
+    private boolean generalRewardsOnly;
+    private boolean sparsePromotionCard;
+    private boolean coBrandCard;
+    private String catalogReviewHint;
 }

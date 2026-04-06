@@ -1,5 +1,6 @@
 package com.cardsense.api.service;
 
+import com.cardsense.api.domain.CardSummary;
 import com.cardsense.api.domain.Promotion;
 import com.cardsense.api.repository.PromotionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +10,7 @@ import org.mockito.Mockito;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -153,5 +155,43 @@ class CatalogServiceTest {
         assertEquals(List.of("RECOMMENDABLE"), catalogService.listCards(null, null, null, null).get(0).getRecommendationScopes());
         assertEquals(1, catalogService.listCards(null, null, "RECOMMENDABLE", null).size());
         assertEquals(0, catalogService.listCards(null, null, "CATALOG_ONLY", null).size());
+    }
+
+    @Test
+    void listCardsExposesReviewSignalsForSparseGeneralOnlyCoBrandCards() {
+        Promotion generalPromo = Promotion.builder()
+                .cardCode("CTBC_CO_BRAND")
+                .cardName("CTBC Demo 聯名卡")
+                .cardStatus("ACTIVE")
+                .annualFee(0)
+                .bankCode("CTBC")
+                .bankName("CTBC")
+                .category("ONLINE")
+                .subcategory("GENERAL")
+                .recommendationScope("RECOMMENDABLE")
+                .build();
+
+        Promotion catalogPromo = Promotion.builder()
+                .cardCode("CTBC_CO_BRAND")
+                .cardName("CTBC Demo 聯名卡")
+                .cardStatus("ACTIVE")
+                .annualFee(0)
+                .bankCode("CTBC")
+                .bankName("CTBC")
+                .category("OTHER")
+                .recommendationScope("CATALOG_ONLY")
+                .requiresRegistration(true)
+                .build();
+
+        when(promotionRepository.findAllPromotions()).thenReturn(List.of(generalPromo, catalogPromo));
+
+        CardSummary card = catalogService.listCards(null, null, null, null).get(0);
+        assertEquals(2, card.getTotalPromotionCount());
+        assertEquals(1, card.getRecommendablePromotionCount());
+        assertEquals(1, card.getCatalogOnlyPromotionCount());
+        assertTrue(card.isGeneralRewardsOnly());
+        assertTrue(card.isSparsePromotionCard());
+        assertTrue(card.isCoBrandCard());
+        assertFalse(card.getCatalogReviewHint().isBlank());
     }
 }

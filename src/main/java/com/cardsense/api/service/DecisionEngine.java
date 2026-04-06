@@ -1070,7 +1070,30 @@ public class DecisionEngine {
                 .promotionBreakdown(breakdown)
                 .applyUrl(promotion.getApplyUrl())
                 .activePlan(buildActivePlan(cardAggregate.winningPlan()))
+                .generalRewardOnly(isGeneralRewardOnly(cardAggregate))
                 .build();
+    }
+
+    private boolean isGeneralRewardOnly(CardAggregate cardAggregate) {
+        return cardAggregate.allEligiblePromotions().stream()
+                .map(ScoredPromotion::promotion)
+                .allMatch(this::isGeneralRewardPromotion);
+    }
+
+    private boolean isGeneralRewardPromotion(Promotion promotion) {
+        String subcategory = normalizeSubcategoryForMatching(promotion.getSubcategory());
+        if (!subcategory.isBlank() && !"GENERAL".equals(subcategory)) {
+            return false;
+        }
+
+        if (promotion.getConditions() == null) {
+            return true;
+        }
+
+        return promotion.getConditions().stream()
+                .map(PromotionCondition::getType)
+                .map(this::normalizeValue)
+                .noneMatch(type -> MERCHANT_CONDITION_TYPES.contains(type));
     }
 
     private ActivePlan buildActivePlan(BenefitPlan plan) {

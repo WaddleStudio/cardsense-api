@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +60,21 @@ public class CatalogService {
     private CardSummary toCardSummary(List<Promotion> promotions) {
         Promotion promotion = promotions.get(0);
         List<String> scopes = resolveCardScopes(promotions);
+        long recommendableCount = promotions.stream()
+                .map(Promotion::getRecommendationScope)
+                .map(this::normalizeScope)
+                .filter("RECOMMENDABLE"::equals)
+                .count();
+        long catalogOnlyCount = promotions.stream()
+                .map(Promotion::getRecommendationScope)
+                .map(this::normalizeScope)
+                .filter("CATALOG_ONLY"::equals)
+                .count();
+        long futureScopeCount = promotions.stream()
+                .map(Promotion::getRecommendationScope)
+                .map(this::normalizeScope)
+                .filter("FUTURE_SCOPE"::equals)
+                .count();
 
         List<String> categories = promotions.stream()
                 .map(Promotion::getCategory)
@@ -80,7 +96,92 @@ public class CatalogService {
                 .eligibilityType(resolveEligibilityType(promotions))
                 .availableCategories(categories)
                 .hasBenefitPlans(promotions.stream().anyMatch(p -> p.getPlanId() != null && !p.getPlanId().isBlank()))
+                .totalPromotionCount(promotions.size())
+                .recommendablePromotionCount((int) recommendableCount)
+                .catalogOnlyPromotionCount((int) catalogOnlyCount)
+                .futureScopePromotionCount((int) futureScopeCount)
+                .generalRewardsOnly(isGeneralRewardsOnly(promotions))
+                .sparsePromotionCard(isSparsePromotionCard(promotions, recommendableCount))
+                .coBrandCard(isCoBrandCard(promotion))
+                .catalogReviewHint(buildCatalogReviewHint(promotions))
                 .build();
+    }
+
+    private boolean isGeneralRewardsOnly(List<Promotion> promotions) {
+        List<Promotion> recommendablePromotions = promotions.stream()
+                .filter(promotion -> "RECOMMENDABLE".equals(normalizeScope(promotion.getRecommendationScope())))
+                .toList();
+
+        if (recommendablePromotions.isEmpty()) {
+            return false;
+        }
+
+        return recommendablePromotions.stream().allMatch(this::isGeneralPromotion);
+    }
+
+    private boolean isGeneralPromotion(Promotion promotion) {
+        String subcategory = promotion.getSubcategory();
+        if (subcategory != null && !subcategory.isBlank() && !"GENERAL".equalsIgnoreCase(subcategory)) {
+            return false;
+        }
+
+        return promotion.getConditions() == null || promotion.getConditions().stream()
+                .noneMatch(condition -> Set.of("MERCHANT", "RETAIL_CHAIN", "ECOMMERCE_PLATFORM").contains(
+                        condition.getType() == null ? "" : condition.getType().trim().toUpperCase(Locale.ROOT)
+                ));
+    }
+
+    private boolean isSparsePromotionCard(List<Promotion> promotions, long recommendableCount) {
+        return promotions.size() <= 2 || recommendableCount <= 1;
+    }
+
+    private boolean isCoBrandCard(Promotion promotion) {
+        String cardName = promotion.getCardName();
+        if (cardName == null || cardName.isBlank()) {
+            return false;
+        }
+        String normalized = cardName.trim().toUpperCase(Locale.ROOT);
+        return normalized.contains("聯名") || normalized.contains("COBRAND") || normalized.contains("CO-BRAND");
+    }
+
+    private String buildCatalogReviewHint(List<Promotion> promotions) {
+        boolean hasCatalogOnly = promotions.stream()
+                .anyMatch(promotion -> "CATALOG_ONLY".equals(normalizeScope(promotion.getRecommendationScope())));
+        if (!hasCatalogOnly) {
+            return null;
+        }
+
+        boolean registrationHeavy = promotions.stream()
+                .filter(promotion -> "CATALOG_ONLY".equals(normalizeScope(promotion.getRecommendationScope())))
+                .anyMatch(Promotion::isRequiresRegistration);
+        boolean planSwitchHeavy = promotions.stream()
+                .filter(promotion -> "CATALOG_ONLY".equals(normalizeScope(promotion.getRecommendationScope())))
+                .anyMatch(promotion -> promotion.getPlanId() != null && !promotion.getPlanId().isBlank());
+        boolean allGeneralRecommendable = isGeneralRewardsOnly(promotions);
+
+        if (registrationHeavy && planSwitchHeavy) {
+            return "部分優惠需先登錄，且實際回饋會受方案切換影響。";
+        }
+        if (registrationHeavy) {
+            return "部分優惠需先完成登錄，暫時保留在目錄展示。";
+        }
+        if (planSwitchHeavy) {
+            return "部分優惠需依當前方案或權益切換判斷，暫時保留在目錄展示。";
+        }
+        if (allGeneralRecommendable) {
+            return "目前可進榜的內容以通用回饋為主，專屬場景優惠仍待補全。";
+        }
+
+        Set<String> catalogCategories = promotions.stream()
+                .filter(promotion -> "CATALOG_ONLY".equals(normalizeScope(promotion.getRecommendationScope())))
+                .map(Promotion::getCategory)
+                .filter(category -> category != null && !category.isBlank())
+                .map(category -> category.trim().toUpperCase(Locale.ROOT))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!catalogCategories.isEmpty()) {
+            return "仍有待審查的目錄型優惠：" + String.join(" / ", catalogCategories);
+        }
+        return "仍有部分優惠保留在目錄展示，待進一步審查。";
     }
 
     private List<String> resolveCardScopes(List<Promotion> promotions) {
