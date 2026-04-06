@@ -21,7 +21,7 @@
 
 - Java 21
 - Spring Boot
-- SQLite（透過 repository abstraction）
+- SQLite / Supabase（透過 repository abstraction）
 - Maven
 
 ## 快速開始
@@ -49,7 +49,7 @@ cd ../cardsense-api
 mvn spring-boot:run \
   -Dspring-boot.run.jvmArguments="\
     -Dcardsense.repository.mode=sqlite \
-    -Dcardsense.repository.sqlite.path=D:/alan_self/cardsense/cardsense-extractor/data/cardsense.db"
+    -Dcardsense.repository.sqlite.path=../cardsense-extractor/data/cardsense.db"
 ```
 
 也可用環境變數：
@@ -64,7 +64,9 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 |------|------|------|
 | GET | `/health` | 健康檢查 |
 | GET | `/v1/banks` | 銀行列表 |
-| GET | `/v1/cards?bank=&status=&scope=` | 卡片目錄（`scope=CATALOG_ONLY` 拉 catalog 型卡片） |
+| GET | `/v1/cards?bank=&status=&scope=&eligibilityType=` | 卡片目錄（支援 scope、eligibilityType 篩選） |
+| GET | `/v1/cards/{cardCode}/promotions` | 卡片優惠列表（依 category 分組） |
+| GET | `/v1/cards/{cardCode}/plans` | 卡片 benefit plan 列表 |
 | POST | `/v1/recommendations/card` | 情境推薦 |
 
 ## 設計重點
@@ -72,17 +74,11 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 ### 推薦流程
 
 1. 解析 top-level request 與 nested `scenario` 為單一比較情境
-2. 過濾不符合情境條件的 promotion（停發卡、零回饋、非 `RECOMMENDABLE` 不進榜）
+2. 過濾不符合情境條件的 promotion（停發卡、零回饋、非 `RECOMMENDABLE` 不進榜、eligibilityType / subcategory / payment method / condition 匹配）
 3. 計算每筆 promotion 的有效回饋與封頂後回饋
-4. 依 `comparison.mode` 收斂成 card-level score
-5. 以 effective return 降序排序，tie-breaker：到期日 → 年費 → 銀行 / 卡片 / promoVersionId
-
-### 比較模式
-
-| Mode | 說明 |
-|------|------|
-| `BEST_SINGLE_PROMOTION` | 每張卡取最佳單筆 promotion 做排名 |
-| `STACK_ALL_ELIGIBLE` | 依 `promotion.stackability` metadata 解出可並存組合，計算 card-level total return |
+4. 疊加所有符合條件的 promotion（`STACK_ALL_ELIGIBLE`），收斂成 card-level score
+5. 對 benefit-plan 卡，依 `exclusiveGroup` 自動選出最佳 plan
+6. 以 effective return 降序排序，tie-breaker：到期日 → 年費 → 銀行 / 卡片 / promoVersionId
 
 ### 推薦規則
 
@@ -108,6 +104,9 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 |------|------|----------|
 | mock（預設） | 無需設定 | `promotions.json` |
 | sqlite | `cardsense.repository.mode=sqlite` | extractor 匯入的 `promotion_current` |
+| supabase | `cardsense.repository.mode=supabase` | Supabase PostgreSQL `promotion_current` |
+
+**部署**：Render；prod profile 連 Supabase PostgreSQL，local profile 保留 SQLite。
 
 ## 與其他子專案的關係
 
@@ -124,18 +123,5 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 
 - SQLite repository 從 `raw_payload_json` 還原 `stackability` metadata，尚未拆成顯式欄位
 - `POINTS` 尚未引入銀行別點數折現規則
-- Break-even 目前只處理代表 promotion 間的 `FIXED` vs `PERCENT` 比較
-- `STACK_ALL_ELIGIBLE` 仍為 heuristic aggregation，待 `stackability` 標註完整後升級為 deterministic stacking
-## Documentation Addendum (2026-04-05)
-
-### Card Catalog Eligibility
-
-- `GET /v1/cards` supports filtering by `eligibilityType`.
-- Supported values are `GENERAL`, `PROFESSION_SPECIFIC`, and `BUSINESS`.
-- Card-level `eligibilityType` is aggregated from all promotions belonging to the same card.
-- Aggregation precedence is `BUSINESS > PROFESSION_SPECIFIC > GENERAL`.
-
-### Operational Note
-
-- API-side aggregation alone is not enough if extractor data is stale.
-- After changing extractor eligibility heuristics, rerun the extraction/import pipeline before validating card catalog filtering in the frontend.
+- Break-even 目前只處理 `FIXED` vs `PERCENT` 交叉點比較
+- Card-level `eligibilityType` 由所有 promotion 聚合得出（`BUSINESS > PROFESSION_SPECIFIC > GENERAL`），若 extractor 資料過時需重跑 pipeline
