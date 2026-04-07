@@ -126,7 +126,7 @@ public class CatalogService {
         }
 
         return promotion.getConditions() == null || promotion.getConditions().stream()
-                .noneMatch(condition -> Set.of("MERCHANT", "RETAIL_CHAIN", "ECOMMERCE_PLATFORM").contains(
+                .noneMatch(condition -> Set.of("VENUE").contains(
                         condition.getType() == null ? "" : condition.getType().trim().toUpperCase(Locale.ROOT)
                 ));
     }

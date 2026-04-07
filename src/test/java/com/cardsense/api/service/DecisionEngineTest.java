@@ -120,7 +120,7 @@ class DecisionEngineTest {
     @Test
     void recommendMatchesMerchantCondition() {
         Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
-        promo.setConditions(List.of(condition("MERCHANT", "CHATGPT", "ChatGPT")));
+        promo.setConditions(List.of(condition("VENUE", "CHATGPT", "ChatGPT")));
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
 
         RecommendationResponse match = decisionEngine.recommend(RecommendationRequest.builder()
@@ -167,7 +167,7 @@ class DecisionEngineTest {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(4.5), 500, LocalDate.of(2026, 6, 30));
         promo.setCategory("SHOPPING");
         promo.setSubcategory("SPORTING_GOODS");
-        promo.setConditions(List.of(condition("RETAIL_CHAIN", "DECATHLON", "迪卡儂")));
+        promo.setConditions(List.of(condition("VENUE", "DECATHLON", "迪卡儂")));
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
 
         RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
@@ -187,7 +187,7 @@ class DecisionEngineTest {
     @Test
     void recommendMatchesPaymentPlatformConditionViaPaymentMethod() {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
-        promo.setConditions(List.of(condition("PAYMENT_PLATFORM", "LINE_PAY", "LINE Pay")));
+        promo.setConditions(List.of(condition("PAYMENT", "LINE_PAY", "LINE Pay")));
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
 
         RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
@@ -206,7 +206,7 @@ class DecisionEngineTest {
     @Test
     void recommendMatchesBroadPaymentMethodConditionViaSpecificPlatform() {
         Promotion promo = buildPromotion("promo1", "ver1", "TAISHIN_RICHART", BigDecimal.valueOf(3.8), 500, LocalDate.of(2026, 6, 30));
-        promo.setConditions(List.of(condition("PAYMENT_METHOD", "MOBILE_PAY", "Mobile Pay")));
+        promo.setConditions(List.of(condition("PAYMENT", "MOBILE_PAY", "Mobile Pay")));
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
 
         RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
@@ -254,7 +254,7 @@ class DecisionEngineTest {
         Promotion merchantPromo = buildPromotion("promo1", "ver1", "CARD_MERCHANT", BigDecimal.valueOf(8.0), 500, LocalDate.of(2026, 6, 30));
         merchantPromo.setCategory("ONLINE");
         merchantPromo.setSubcategory("GENERAL");
-        merchantPromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "PCHOME_24H", "PChome 24h")));
+        merchantPromo.setConditions(List.of(condition("VENUE", "PCHOME_24H", "PChome 24h")));
 
         Promotion genericPromo = buildPromotion("promo2", "ver2", "CARD_GENERIC", BigDecimal.valueOf(10.0), 500, LocalDate.of(2026, 6, 30));
         genericPromo.setCategory("ONLINE");

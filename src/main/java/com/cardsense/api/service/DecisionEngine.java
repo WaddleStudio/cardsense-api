@@ -39,10 +39,10 @@ public class DecisionEngine {
     public static final String DISCLAIMER = "CardSense 提供信用卡優惠比較資訊，不構成金融建議。實際回饋依各銀行公告為準，請以銀行官網資訊為最終依據。";
 
     private static final Set<String> MERCHANT_CONDITION_TYPES = Set.of(
-            "ECOMMERCE_PLATFORM", "RETAIL_CHAIN", "MERCHANT"
+            "VENUE"
     );
     private static final Set<String> PAYMENT_CONDITION_TYPES = Set.of(
-            "PAYMENT_PLATFORM", "PAYMENT_METHOD"
+            "PAYMENT"
     );
     private static final Set<String> MOBILE_PAY_PLATFORM_VALUES = Set.of(
             "MOBILE_PAY",

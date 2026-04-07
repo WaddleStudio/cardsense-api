@@ -50,12 +50,12 @@ public class DecisionEngineBenefitPlanTest {
         Promotion shopeePromo = buildPromotion("digital1", "digital_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
                 BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
         shopeePromo.setPlanId("CATHAY_CUBE_DIGITAL");
-        shopeePromo.setConditions(List.of(condition("ECOMMERCE_PLATFORM", "SHOPEE", "蝦皮")));
+        shopeePromo.setConditions(List.of(condition("VENUE", "SHOPEE", "蝦皮")));
 
         Promotion sogoPromo = buildPromotion("shopping1", "shopping_ver1", "CATHAY_CUBE", "CUBE卡", "CATHAY", "國泰世華",
                 BigDecimal.valueOf(3.0), 500, 0, LocalDate.of(2026, 6, 30));
         sogoPromo.setPlanId("CATHAY_CUBE_SHOPPING");
-        sogoPromo.setConditions(List.of(condition("RETAIL_CHAIN", "SOGO", "SOGO")));
+        sogoPromo.setConditions(List.of(condition("VENUE", "SOGO", "SOGO")));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(basePromo, shopeePromo, sogoPromo));
 
@@ -297,7 +297,7 @@ public class DecisionEngineBenefitPlanTest {
         unicardPromo.setRecommendationScope("CATALOG_ONLY");
         unicardPromo.setConditions(List.of(
                 condition("TEXT", "UNICARD_HUNDRED_STORE_CATALOG", "百大指定消費"),
-                condition("RETAIL_CHAIN", "DECATHLON", "迪卡儂")
+                condition("VENUE", "DECATHLON", "迪卡儂")
         ));
 
         when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(unicardPromo));
