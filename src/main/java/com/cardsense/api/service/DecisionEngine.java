@@ -152,22 +152,26 @@ public class DecisionEngine {
             return false;
         }
 
-        if (promotion.getCategory() != null && !normalizeValue(promotion.getCategory()).equals(normalizeValue(category))) {
-            return false;
-        }
+        boolean merchantMatchesVenue = hasMerchantMatchingVenueCondition(promotion, request);
 
-        String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
-        String promoSubcategory = normalizeSubcategoryForMatching(promotion.getSubcategory());
-        boolean hasStrictSubcategory = !requestSubcategory.isBlank() && !"GENERAL".equals(requestSubcategory);
-
-        if (hasStrictSubcategory) {
-            if (!promoSubcategory.isBlank()
-                    && !"GENERAL".equals(promoSubcategory)
-                    && !requestSubcategory.equals(promoSubcategory)) {
+        if (!merchantMatchesVenue) {
+            if (promotion.getCategory() != null && !normalizeValue(promotion.getCategory()).equals(normalizeValue(category))) {
                 return false;
             }
-        } else if (!"GENERAL".equals(promoSubcategory) && !promoSubcategory.isBlank()) {
-            return false;
+
+            String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
+            String promoSubcategory = normalizeSubcategoryForMatching(promotion.getSubcategory());
+            boolean hasStrictSubcategory = !requestSubcategory.isBlank() && !"GENERAL".equals(requestSubcategory);
+
+            if (hasStrictSubcategory) {
+                if (!promoSubcategory.isBlank()
+                        && !"GENERAL".equals(promoSubcategory)
+                        && !requestSubcategory.equals(promoSubcategory)) {
+                    return false;
+                }
+            } else if (!"GENERAL".equals(promoSubcategory) && !promoSubcategory.isBlank()) {
+                return false;
+            }
         }
 
         if (promotion.getMinAmount() != null && amount < promotion.getMinAmount()) {
@@ -1190,6 +1194,15 @@ public class DecisionEngine {
         }
 
         return locationOnlyTokens.stream().anyMatch(normalizedLocation::contains);
+    }
+
+    private boolean hasMerchantMatchingVenueCondition(Promotion promotion, RecommendationRequest request) {
+        String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
+        if (normalizedMerchant.isBlank()) {
+            return false;
+        }
+        List<String> merchantTokens = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
+        return !merchantTokens.isEmpty() && merchantTokens.stream().anyMatch(normalizedMerchant::equals);
     }
 
     private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
