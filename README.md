@@ -119,9 +119,10 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 2. 匯入 SQLite
 3. 啟動 API 驗證 recommendation / catalog 行為
 
-## 已知限制
+## 已知限制與未來規劃
 
-- SQLite repository 從 `raw_payload_json` 還原 `stackability` metadata，尚未拆成顯式欄位
-- `POINTS` 尚未引入銀行別點數折現規則
-- Break-even 目前只處理 `FIXED` vs `PERCENT` 交叉點比較
-- Card-level `eligibilityType` 由所有 promotion 聚合得出（`BUSINESS > PROFESSION_SPECIFIC > GENERAL`），若 extractor 資料過時需重跑 pipeline
+- **My Wallet Mode**：將於近期引入，允許使用者傳入自己目前擁有的卡片庫 (`cardCodes`)，推薦引擎將提供「最優持有卡」與「申辦新卡利差估算」。
+- `POINTS` 與 `MILES` 的高階折現 / 價值正規化規則為準備實作之 P0 核心特色。
+- SQLite repository 從 `raw_payload_json` 還原 `stackability` metadata，尚未拆成顯式欄位。
+- Break-even 目前只處理 `FIXED` vs `PERCENT` 交叉點比較。
+- Card-level `eligibilityType` 由所有 promotion 聚合得出（`BUSINESS > PROFESSION_SPECIFIC > GENERAL`），若 extractor 資料過時需重跑 pipeline。
