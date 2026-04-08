@@ -16,7 +16,11 @@ public class RewardCalculatorTest {
 
     @BeforeEach
     public void setup() {
-        calculator = new RewardCalculator();
+        ExchangeRateService mockRateService = org.mockito.Mockito.mock(ExchangeRateService.class);
+        org.mockito.Mockito.when(mockRateService.getPointValueRate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(BigDecimal.ONE);
+        org.mockito.Mockito.when(mockRateService.getMileValueRate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(new BigDecimal("0.40"));
+        org.mockito.Mockito.when(mockRateService.getRateSource(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn("SYSTEM_DEFAULT");
+        calculator = new RewardCalculator(mockRateService);
     }
 
     // --- PERCENT ---
@@ -24,19 +28,19 @@ public class RewardCalculatorTest {
     @Test
     public void testPercentReward() {
         Promotion promo = promotion("PERCENT", BigDecimal.valueOf(3.0), null, null);
-        assertEquals(30, calculator.calculateReward(promo, 1000));
+        assertEquals(30, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testPercentRewardCappedByMaxCashback() {
         Promotion promo = promotion("PERCENT", BigDecimal.valueOf(3.0), 20, null);
-        assertEquals(20, calculator.calculateReward(promo, 1000));
+        assertEquals(20, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testPercentRewardBelowMinAmount() {
         Promotion promo = promotion("PERCENT", BigDecimal.valueOf(3.0), null, 500);
-        assertEquals(0, calculator.calculateReward(promo, 400));
+        assertEquals(0, calculator.calculateReward(promo, 400, java.util.Map.of()).getCappedReturn());
     }
 
     // --- FIXED ---
@@ -44,14 +48,14 @@ public class RewardCalculatorTest {
     @Test
     public void testFixedReward() {
         Promotion promo = promotion("FIXED", BigDecimal.valueOf(50), null, null);
-        assertEquals(50, calculator.calculateReward(promo, 1000));
+        assertEquals(50, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testFixedRewardCappedBySanityGuard() {
         // Fixed reward > transaction amount is capped at transaction amount
         Promotion promo = promotion("FIXED", BigDecimal.valueOf(200), null, null);
-        assertEquals(100, calculator.calculateReward(promo, 100));
+        assertEquals(100, calculator.calculateReward(promo, 100, java.util.Map.of()).getCappedReturn());
     }
 
     // --- POINTS: percentage-rate (value < 30) ---
@@ -60,21 +64,21 @@ public class RewardCalculatorTest {
     public void testPointsPercentageRate() {
         // "5% P幣回饋" — cashbackValue=5 is a percentage rate
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(5.0), null, null);
-        assertEquals(50, calculator.calculateReward(promo, 1000));
+        assertEquals(50, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testPointsSmallPercentageRate() {
         // "0.2% 玉山e point" — cashbackValue=0.2
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(0.2), null, null);
-        assertEquals(2, calculator.calculateReward(promo, 1000));
+        assertEquals(2, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testPointsJustBelowThreshold() {
         // cashbackValue=29 is still treated as a percentage (29% = 290 on 1000)
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(29), null, null);
-        assertEquals(290, calculator.calculateReward(promo, 1000));
+        assertEquals(290, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     // --- POINTS: fixed-bonus (value >= 30) ---
@@ -83,7 +87,7 @@ public class RewardCalculatorTest {
     public void testPointsFixedBonusAtThreshold() {
         // cashbackValue=30 is the boundary — treated as FIXED bonus
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(30), null, null);
-        assertEquals(30, calculator.calculateReward(promo, 1000));
+        assertEquals(30, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
@@ -91,7 +95,7 @@ public class RewardCalculatorTest {
         // "最高享2000點" — without the fix this would clamp to transactionAmount (100% return)
         // With fix: treated as FIXED 2000, capped at transactionAmount=1000
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(2000), null, null);
-        assertEquals(1000, calculator.calculateReward(promo, 1000));
+        assertEquals(1000, calculator.calculateReward(promo, 1000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
@@ -99,15 +103,15 @@ public class RewardCalculatorTest {
         // Fixed-bonus POINTS should return the same value regardless of transaction amount
         // (not scaled by amount), unlike percentage-rate POINTS
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(50), null, null);
-        assertEquals(50, calculator.calculateReward(promo, 500));
-        assertEquals(50, calculator.calculateReward(promo, 5000));
+        assertEquals(50, calculator.calculateReward(promo, 500, java.util.Map.of()).getCappedReturn());
+        assertEquals(50, calculator.calculateReward(promo, 5000, java.util.Map.of()).getCappedReturn());
     }
 
     @Test
     public void testPointsFixedBonusWithMaxCashback() {
         // maxCashback acts as a further cap on fixed bonus
         Promotion promo = promotion("POINTS", BigDecimal.valueOf(2000), 500, null);
-        assertEquals(500, calculator.calculateReward(promo, 10000));
+        assertEquals(500, calculator.calculateReward(promo, 10000, java.util.Map.of()).getCappedReturn());
     }
 
     // --- Break-even: POINTS percentage-rate qualifies as variable reward ---
@@ -117,7 +121,7 @@ public class RewardCalculatorTest {
         Promotion fixedPromo = promotion("FIXED", BigDecimal.valueOf(50), null, null);
         Promotion pointsRatePromo = promotion("POINTS", BigDecimal.valueOf(5.0), null, null);
         // break-even = 50 × 100 / 5 = 1000
-        assertEquals(1000, calculator.calculateBreakEvenAmount(fixedPromo, pointsRatePromo));
+        assertEquals(1000, calculator.calculateBreakEvenAmount(fixedPromo, pointsRatePromo, java.util.Map.of()));
     }
 
     @Test
@@ -125,7 +129,7 @@ public class RewardCalculatorTest {
         // Fixed-count POINTS don't behave as variable rewards, so no break-even applies
         Promotion fixedPromo = promotion("FIXED", BigDecimal.valueOf(50), null, null);
         Promotion pointsBonusPromo = promotion("POINTS", BigDecimal.valueOf(2000), null, null);
-        assertNull(calculator.calculateBreakEvenAmount(fixedPromo, pointsBonusPromo));
+        assertNull(calculator.calculateBreakEvenAmount(fixedPromo, pointsBonusPromo, java.util.Map.of()));
     }
 
     // --- Helpers ---

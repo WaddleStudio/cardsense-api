@@ -26,4 +26,5 @@ public class PromotionRewardBreakdown {
     private LocalDate validUntil;
     private List<PromotionCondition> conditions;
     private String reason;
+    private RewardDetail rewardDetail;
 }

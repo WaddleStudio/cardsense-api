@@ -32,4 +32,5 @@ public class CardRecommendation {
     private String applyUrl;
     private ActivePlan activePlan;
     private boolean generalRewardOnly;
+    private RewardDetail rewardDetail;
 }

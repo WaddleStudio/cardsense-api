@@ -1,0 +1,19 @@
+{
+  "version": "2026-04-08",
+  "rates": {
+    "POINTS": {
+      "CTBC":    { "value": 1.0, "unit": "LINE Points",  "note": "1:1 折抵消費" },
+      "CATHAY":  { "value": 1.0, "unit": "小樹點",       "note": "1:1 折抵消費" },
+      "TAISHIN": { "value": 1.0, "unit": "DAWHO 幣",     "note": "1:1 折抵消費" },
+      "ESUN":    { "value": 1.0, "unit": "e point",      "note": "1:1 折抵消費" },
+      "FUBON":   { "value": 1.0, "unit": "mmo 幣",       "note": "1:1 折抵消費" },
+      "_DEFAULT": { "value": 1.0, "unit": "點數",        "note": "預設 1:1" }
+    },
+    "MILES": {
+      "_DEFAULT":     { "value": 0.40, "unit": "航空哩程", "note": "保守估值，經濟艙兌換基準" },
+      "EVA_INFINITY": { "value": 0.50, "unit": "長榮哩程", "note": "亞洲區段經濟艙" },
+      "ASIA_MILES":   { "value": 0.40, "unit": "亞洲萬里通", "note": "國泰/港龍經濟艙" },
+      "JALPAK":       { "value": 0.35, "unit": "JAL 哩程",  "note": "日航經濟艙" }
+    }
+  }
+}

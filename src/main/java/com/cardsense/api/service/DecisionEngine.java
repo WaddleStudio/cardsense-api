@@ -98,7 +98,7 @@ public class DecisionEngine {
         List<ScoredPromotion> scoredPromotions = activePromotions.stream()
                 .map(promotion -> applyRuntimeAdjustments(promotion, request))
                 .filter(promotion -> isEligible(promotion, request))
-                .map(promotion -> toScoredPromotion(promotion, resolvedScenario.getAmount()))
+                .map(promotion -> toScoredPromotion(promotion, resolvedScenario.getAmount(), request))
                 .filter(scored -> scored.cappedReturn() > 0)
                 .sorted(promotionComparator)
                 .toList();
@@ -117,7 +117,7 @@ public class DecisionEngine {
                 .toList();
 
         List<BreakEvenAnalysis> breakEvenAnalyses = request.shouldIncludeBreakEvenAnalysis()
-                ? buildBreakEvenAnalyses(rankedCards)
+                ? buildBreakEvenAnalyses(rankedCards, request)
                 : List.of();
 
         return RecommendationResponse.builder()
@@ -597,13 +597,9 @@ public class DecisionEngine {
                 .anyMatch(UNICARD_HUNDRED_STORE_MARKER::equals);
     }
 
-    private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount) {
-        int estimatedReturn = rewardCalculator.calculateReward(promotion, amount);
-        int cappedReturn = promotion.getMaxCashback() == null
-                ? estimatedReturn
-                : Math.min(estimatedReturn, promotion.getMaxCashback());
-
-        return new ScoredPromotion(promotion, estimatedReturn, cappedReturn);
+    private ScoredPromotion toScoredPromotion(Promotion promotion, Integer amount, RecommendationRequest request) {
+        RewardCalculator.RewardCalculationResult result = rewardCalculator.calculateReward(promotion, amount, request.getCustomExchangeRates());
+        return new ScoredPromotion(promotion, result.getEstimatedReturn(), result.getCappedReturn(), result.getRewardDetail());
     }
 
     private Comparator<ScoredPromotion> recommendationComparator() {
@@ -1075,6 +1071,7 @@ public class DecisionEngine {
                 .applyUrl(promotion.getApplyUrl())
                 .activePlan(buildActivePlan(cardAggregate.winningPlan()))
                 .generalRewardOnly(isGeneralRewardOnly(cardAggregate))
+                .rewardDetail(cardAggregate.contributingPromotions().get(0).rewardDetail())
                 .build();
     }
 
@@ -1139,7 +1136,8 @@ public class DecisionEngine {
                                 .assumedStackable(false)
                             .validUntil(promotion.getValidUntil())
                             .conditions(buildRecommendationConditions(promotion))
-                                .reason(buildBreakdownReason(cardAggregate, scoredPromotion, contributes))
+                            .reason(buildBreakdownReason(cardAggregate, scoredPromotion, contributes))
+                            .rewardDetail(scoredPromotion.rewardDetail())
                             .build();
                 })
                 .toList();
@@ -1400,10 +1398,10 @@ public class DecisionEngine {
                 .build();
     }
 
-    private List<BreakEvenAnalysis> buildBreakEvenAnalyses(List<CardAggregate> rankedCards) {
+    private List<BreakEvenAnalysis> buildBreakEvenAnalyses(List<CardAggregate> rankedCards, RecommendationRequest request) {
         List<BreakEvenAnalysis> analyses = new ArrayList<>();
         for (int index = 0; index < rankedCards.size() - 1; index++) {
-            Optional<BreakEvenAnalysis> maybeAnalysis = buildBreakEvenAnalysis(rankedCards.get(index), rankedCards.get(index + 1));
+            Optional<BreakEvenAnalysis> maybeAnalysis = buildBreakEvenAnalysis(rankedCards.get(index), rankedCards.get(index + 1), request);
             maybeAnalysis.ifPresent(analyses::add);
             if (analyses.size() >= 3) {
                 break;
@@ -1412,7 +1410,7 @@ public class DecisionEngine {
         return analyses;
     }
 
-    private Optional<BreakEvenAnalysis> buildBreakEvenAnalysis(CardAggregate left, CardAggregate right) {
+    private Optional<BreakEvenAnalysis> buildBreakEvenAnalysis(CardAggregate left, CardAggregate right, RecommendationRequest request) {
         Promotion leftPromotion = left.primaryPromotion();
         Promotion rightPromotion = right.primaryPromotion();
 
@@ -1428,7 +1426,7 @@ public class DecisionEngine {
             return Optional.empty();
         }
 
-        Integer breakEvenAmount = rewardCalculator.calculateBreakEvenAmount(fixedPromotion, variablePromotion);
+        Integer breakEvenAmount = rewardCalculator.calculateBreakEvenAmount(fixedPromotion, variablePromotion, request.getCustomExchangeRates());
         if (breakEvenAmount == null) {
             return Optional.empty();
         }
@@ -1463,7 +1461,8 @@ public class DecisionEngine {
     private boolean isVariableReward(Promotion promotion) {
         return promotion.getCashbackType() != null
                 && ("PERCENT".equalsIgnoreCase(promotion.getCashbackType())
-                || "POINTS".equalsIgnoreCase(promotion.getCashbackType()));
+                || "POINTS".equalsIgnoreCase(promotion.getCashbackType())
+                || "MILES".equalsIgnoreCase(promotion.getCashbackType()));
     }
 
     private String resolveCashbackSuffix(String cashbackType) {

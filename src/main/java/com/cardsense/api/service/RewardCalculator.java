@@ -1,79 +1,107 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.RewardDetail;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class RewardCalculator {
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
-    private static final BigDecimal DEFAULT_MILE_VALUE = new BigDecimal("0.40");
 
-    /**
-     * Threshold distinguishing POINTS-as-percentage from POINTS-as-fixed-bonus.
-     *
-     * <p>The extractor stores two semantically different values under the same POINTS type:
-     * <ul>
-     *   <li><b>Percentage rate</b> (value &lt; 30): extracted from "X% P幣/e point/哩" patterns.
-     *       e.g. cashbackValue=5 → "5% P幣回饋" → reward = amount × 5 / 100.</li>
-     *   <li><b>Fixed bonus count</b> (value &ge; 30): extracted from "送N點/哩" patterns.</li>
-     * </ul>
-     */
-    static final BigDecimal POINTS_FIXED_BONUS_THRESHOLD = BigDecimal.valueOf(30);
+    private final ExchangeRateService exchangeRateService;
 
-    public int calculateReward(Promotion promotion, int transactionAmount) {
+    public static final BigDecimal POINTS_FIXED_BONUS_THRESHOLD = BigDecimal.valueOf(30);
+
+    @Getter
+    @AllArgsConstructor
+    public static class RewardCalculationResult {
+        private final int estimatedReturn;
+        private final int cappedReturn;
+        private final RewardDetail rewardDetail;
+    }
+
+    public RewardCalculationResult calculateReward(Promotion promotion, int transactionAmount, Map<String, BigDecimal> customRates) {
         if (promotion.getMinAmount() != null && transactionAmount < promotion.getMinAmount()) {
-            return 0;
+            return new RewardCalculationResult(0, 0, null);
         }
 
         if (promotion.getCashbackType() == null || promotion.getCashbackValue() == null) {
-            return 0;
+            return new RewardCalculationResult(0, 0, null);
         }
 
         BigDecimal amount = BigDecimal.valueOf(transactionAmount);
-        BigDecimal reward = switch (promotion.getCashbackType().toUpperCase()) {
-            case "PERCENT" -> amount
-                    .multiply(promotion.getCashbackValue())
-                    .divide(ONE_HUNDRED, 0, RoundingMode.DOWN);
+        BigDecimal rawRewardValue = BigDecimal.ZERO;
+        BigDecimal exchangeRate = BigDecimal.ONE;
+        String rawUnit = "NTD";
+        String rateSource = "SYSTEM_DEFAULT";
+        String note = "";
+
+        switch (promotion.getCashbackType().toUpperCase()) {
+            case "PERCENT" -> {
+                rawRewardValue = amount.multiply(promotion.getCashbackValue()).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
+                rawUnit = "TWD";
+            }
             case "MILES" -> {
-                if (promotion.getCashbackValue().compareTo(BigDecimal.ZERO) <= 0) {
-                    yield BigDecimal.ZERO;
+                if (promotion.getCashbackValue().compareTo(BigDecimal.ZERO) > 0) {
+                    rawRewardValue = amount.divide(promotion.getCashbackValue(), 2, RoundingMode.HALF_UP);
+                    exchangeRate = exchangeRateService.getMileValueRate(promotion.getBankCode(), customRates);
+                    rawUnit = "航空哩程";
+                    rateSource = exchangeRateService.getRateSource("MILES", promotion.getBankCode(), customRates);
+                    note = String.format("航空哩程 × %s TWD/哩", exchangeRate.toPlainString());
                 }
-                // cashbackValue is "NTD per Mile" (e.g. 15 NTD = 1 Mile)
-                BigDecimal milesEarned = amount.divide(promotion.getCashbackValue(), 2, RoundingMode.HALF_UP);
-                yield milesEarned.multiply(getMileValueRate(promotion.getBankCode())).setScale(0, RoundingMode.DOWN);
             }
             case "POINTS" -> {
-                BigDecimal pointsEarned = isPointsFixedBonus(promotion.getCashbackValue())
+                rawRewardValue = isPointsFixedBonus(promotion.getCashbackValue())
                         ? promotion.getCashbackValue()
                         : amount.multiply(promotion.getCashbackValue()).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
-                yield pointsEarned.multiply(getPointValueRate(promotion.getBankCode())).setScale(0, RoundingMode.DOWN);
+                exchangeRate = exchangeRateService.getPointValueRate(promotion.getBankCode(), customRates);
+                rawUnit = "點數";
+                rateSource = exchangeRateService.getRateSource("POINTS", promotion.getBankCode(), customRates);
+                note = String.format("點數 × %s TWD/點", exchangeRate.toPlainString());
             }
-            case "FIXED" -> promotion.getCashbackValue();
-            default -> BigDecimal.ZERO;
-        };
-
-        int rawReward = reward.intValue();
-
-        if (promotion.getMaxCashback() != null && promotion.getMaxCashback() > 0) {
-            // maxCashback is in native points/miles/NTD. We need to convert the native limit to NTD valuation cap
-            int ntdCapLimit = switch (promotion.getCashbackType().toUpperCase()) {
-                case "PERCENT", "FIXED" -> promotion.getMaxCashback();
-                case "POINTS" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(getPointValueRate(promotion.getBankCode())).intValue();
-                case "MILES" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(getMileValueRate(promotion.getBankCode())).intValue();
-                default -> promotion.getMaxCashback();
-            };
-            rawReward = Math.min(rawReward, ntdCapLimit);
+            case "FIXED" -> {
+                rawRewardValue = promotion.getCashbackValue();
+                rawUnit = "TWD";
+            }
         }
 
-        // Sanity guard: reward should never exceed the transaction amount
-        return Math.min(rawReward, transactionAmount);
+        int estimatedReturn = rawRewardValue.multiply(exchangeRate).setScale(0, RoundingMode.DOWN).intValue();
+        int rawRewardIntVal = Math.min(estimatedReturn, transactionAmount);
+
+        int cappedReturn = rawRewardIntVal;
+
+        if (promotion.getMaxCashback() != null && promotion.getMaxCashback() > 0) {
+            int ntdCapLimit = switch (promotion.getCashbackType().toUpperCase()) {
+                case "PERCENT", "FIXED" -> promotion.getMaxCashback();
+                case "POINTS" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(exchangeRateService.getPointValueRate(promotion.getBankCode(), customRates)).intValue();
+                case "MILES" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(exchangeRateService.getMileValueRate(promotion.getBankCode(), customRates)).intValue();
+                default -> promotion.getMaxCashback();
+            };
+            cappedReturn = Math.min(rawRewardIntVal, ntdCapLimit);
+        }
+
+        RewardDetail detail = RewardDetail.builder()
+                .rawReward(rawRewardValue)
+                .rawUnit(rawUnit)
+                .exchangeRate(exchangeRate)
+                .exchangeRateSource(rateSource)
+                .ntdEquivalent(cappedReturn)
+                .note(note)
+                .build();
+
+        return new RewardCalculationResult(rawRewardIntVal, cappedReturn, detail);
     }
 
-    public Integer calculateBreakEvenAmount(Promotion fixedPromotion, Promotion variablePromotion) {
+    public Integer calculateBreakEvenAmount(Promotion fixedPromotion, Promotion variablePromotion, Map<String, BigDecimal> customRates) {
         if (fixedPromotion == null || variablePromotion == null) {
             return null;
         }
@@ -90,9 +118,8 @@ public class RewardCalculator {
 
         return switch (variablePromotion.getCashbackType().toUpperCase()) {
             case "MILES" -> {
-                BigDecimal mileValue = getMileValueRate(variablePromotion.getBankCode());
+                BigDecimal mileValue = exchangeRateService.getMileValueRate(variablePromotion.getBankCode(), customRates);
                 if (mileValue.compareTo(BigDecimal.ZERO) <= 0) yield null;
-                // amount = fixed * rate / mile_value
                 yield fixedNtdValue.multiply(variablePromotion.getCashbackValue())
                         .divide(mileValue, 0, RoundingMode.CEILING)
                         .intValue();
@@ -101,7 +128,7 @@ public class RewardCalculator {
                     .divide(variablePromotion.getCashbackValue(), 0, RoundingMode.CEILING)
                     .intValue();
             case "POINTS" -> {
-                BigDecimal ptValue = getPointValueRate(variablePromotion.getBankCode());
+                BigDecimal ptValue = exchangeRateService.getPointValueRate(variablePromotion.getBankCode(), customRates);
                 if (ptValue.compareTo(BigDecimal.ZERO) <= 0) yield null;
                 yield fixedNtdValue.multiply(ONE_HUNDRED)
                         .divide(variablePromotion.getCashbackValue().multiply(ptValue), 0, RoundingMode.CEILING)
@@ -122,7 +149,7 @@ public class RewardCalculator {
 
         return switch (promotion.getCashbackType().toUpperCase()) {
             case "MILES" -> BigDecimal.valueOf(promotion.getMaxCashback())
-                    .multiply(promotion.getCashbackValue()) // MaxMiles * NTD_per_mile
+                    .multiply(promotion.getCashbackValue())
                     .setScale(0, RoundingMode.CEILING)
                     .intValue();
             case "PERCENT", "POINTS" -> BigDecimal.valueOf(promotion.getMaxCashback())
@@ -147,25 +174,5 @@ public class RewardCalculator {
 
     private boolean isPointsFixedBonus(BigDecimal cashbackValue) {
         return cashbackValue.compareTo(POINTS_FIXED_BONUS_THRESHOLD) >= 0;
-    }
-
-    /**
-     * Determines the monetary value (NTD) of one airline mile based on the bank or default conservative estimation.
-     */
-    private BigDecimal getMileValueRate(String bankCode) {
-        // High-end miles usually value around 0.4 NTD to 0.5 NTD.
-        return DEFAULT_MILE_VALUE;
-    }
-
-    /**
-     * Determines the monetary value (NTD) of one bank point.
-     */
-    private BigDecimal getPointValueRate(String bankCode) {
-        if (bankCode == null) return BigDecimal.ONE;
-        return switch (bankCode.toUpperCase()) {
-            // Most modern reward points (CUBE, LINE Points, e-point) are 1:1 with NTD.
-            case "CTBC", "CATHAY", "TAISHIN", "ESUN", "FUBON" -> BigDecimal.ONE;
-            default -> BigDecimal.ONE;
-        };
     }
 }

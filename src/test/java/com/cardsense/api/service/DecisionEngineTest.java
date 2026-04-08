@@ -36,7 +36,11 @@ class DecisionEngineTest {
     void setUp() {
         promotionRepository = Mockito.mock(PromotionRepository.class);
         benefitPlanRepository = Mockito.mock(BenefitPlanRepository.class);
-        decisionEngine = new DecisionEngine(promotionRepository, new RewardCalculator(), benefitPlanRepository);
+        ExchangeRateService mockRateService = Mockito.mock(ExchangeRateService.class);
+        when(mockRateService.getPointValueRate(any(), any())).thenReturn(BigDecimal.ONE);
+        when(mockRateService.getMileValueRate(any(), any())).thenReturn(new BigDecimal("0.40"));
+        when(mockRateService.getRateSource(any(), any(), any())).thenReturn("SYSTEM_DEFAULT");
+        decisionEngine = new DecisionEngine(promotionRepository, new RewardCalculator(mockRateService), benefitPlanRepository);
     }
 
     @Test

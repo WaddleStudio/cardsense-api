@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -49,6 +50,13 @@ public class RecommendationRequest {
     private Map<String, String> activePlansByCard;
 
     private Map<String, Map<String, String>> planRuntimeByCard;
+
+    /**
+     * Optional user-supplied exchange rates to override system defaults.
+     * Key format: "{CASHBACK_TYPE}.{BANK_CODE}" or "{CASHBACK_TYPE}._DEFAULT"
+     * Examples: "MILES._DEFAULT" → 0.60, "POINTS.ESUN" → 0.80
+     */
+    private Map<String, BigDecimal> customExchangeRates;
 
     @JsonIgnore
     public Integer getResolvedAmount() {
