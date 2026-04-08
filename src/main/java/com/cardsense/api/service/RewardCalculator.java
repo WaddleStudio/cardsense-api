@@ -47,6 +47,9 @@ public class RewardCalculator {
             case "PERCENT" -> amount
                     .multiply(promotion.getCashbackValue())
                     .divide(ONE_HUNDRED, 0, RoundingMode.DOWN);
+            case "MILES" -> amount
+                    .multiply(promotion.getCashbackValue())
+                    .setScale(0, RoundingMode.DOWN);
             case "POINTS" -> isPointsFixedBonus(promotion.getCashbackValue())
                     // Fixed-count bonus (e.g. "送2000點"): treat as FIXED NTD-equivalent
                     ? promotion.getCashbackValue()
@@ -112,7 +115,7 @@ public class RewardCalculator {
         if (promotion.getCashbackType() == null) {
             return false;
         }
-        if ("PERCENT".equalsIgnoreCase(promotion.getCashbackType())) {
+        if ("PERCENT".equalsIgnoreCase(promotion.getCashbackType()) || "MILES".equalsIgnoreCase(promotion.getCashbackType())) {
             return true;
         }
         // Only percentage-rate POINTS behave as variable rewards for break-even analysis
