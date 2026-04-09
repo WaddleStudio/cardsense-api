@@ -1,19 +1,19 @@
 {
-  "version": "2026-04-08",
+  "version": "2026-04-10",
   "rates": {
     "POINTS": {
-      "CTBC":    { "value": 1.0, "unit": "LINE Points",  "note": "1:1 折抵消費" },
-      "CATHAY":  { "value": 1.0, "unit": "小樹點",       "note": "1:1 折抵消費" },
-      "TAISHIN": { "value": 1.0, "unit": "DAWHO 幣",     "note": "1:1 折抵消費" },
-      "ESUN":    { "value": 1.0, "unit": "e point",      "note": "1:1 折抵消費" },
-      "FUBON":   { "value": 1.0, "unit": "mmo 幣",       "note": "1:1 折抵消費" },
-      "_DEFAULT": { "value": 1.0, "unit": "點數",        "note": "預設 1:1" }
+      "_DEFAULT": { "value": 1.0, "unit": "點數", "note": "預設 1:1 台幣估值" },
+      "CTBC": { "value": 1.0, "unit": "LINE Points", "note": "中信 LINE Points 以 1:1 折抵估值" },
+      "CATHAY": { "value": 1.0, "unit": "小樹點", "note": "國泰小樹點以 1:1 折抵估值" },
+      "TAISHIN": { "value": 1.0, "unit": "DAWHO Points", "note": "台新 DAWHO Points 以 1:1 折抵估值" },
+      "ESUN": { "value": 1.0, "unit": "e point", "note": "玉山 e point 以 1:1 折抵估值" },
+      "FUBON": { "value": 1.0, "unit": "momo 幣 / mmo Point", "note": "富邦體系點數以保守 1:1 折抵估值" }
     },
     "MILES": {
-      "_DEFAULT":     { "value": 0.40, "unit": "航空哩程", "note": "保守估值，經濟艙兌換基準" },
-      "EVA_INFINITY": { "value": 0.50, "unit": "長榮哩程", "note": "亞洲區段經濟艙" },
-      "ASIA_MILES":   { "value": 0.40, "unit": "亞洲萬里通", "note": "國泰/港龍經濟艙" },
-      "JALPAK":       { "value": 0.35, "unit": "JAL 哩程",  "note": "日航經濟艙" }
+      "_DEFAULT": { "value": 0.40, "unit": "航空哩程", "note": "保守估值，適合作為一般哩程比較基準" },
+      "ASIA_MILES": { "value": 0.40, "unit": "亞洲萬里通", "note": "以亞洲區段經濟艙的保守兌換價值估算" },
+      "EVA_INFINITY": { "value": 0.50, "unit": "長榮無限萬哩遊", "note": "以長榮亞洲線兌換價值做保守估算" },
+      "JALPAK": { "value": 0.35, "unit": "JAL 哩程", "note": "以日航經濟艙兌換價值做保守估算" }
     }
   }
 }
