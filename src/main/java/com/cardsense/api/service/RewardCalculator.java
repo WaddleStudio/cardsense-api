@@ -41,36 +41,37 @@ public class RewardCalculator {
         BigDecimal amount = BigDecimal.valueOf(transactionAmount);
         BigDecimal rawRewardValue = BigDecimal.ZERO;
         BigDecimal exchangeRate = BigDecimal.ONE;
-        String rawUnit = "NTD";
+        String rawUnit = "TWD";
         String rateSource = "SYSTEM_DEFAULT";
-        String note = "";
+        String note = null;
 
         switch (promotion.getCashbackType().toUpperCase()) {
-            case "PERCENT" -> {
-                rawRewardValue = amount.multiply(promotion.getCashbackValue()).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
-                rawUnit = "TWD";
-            }
+            case "PERCENT" -> rawRewardValue = amount.multiply(promotion.getCashbackValue())
+                    .divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
             case "MILES" -> {
                 if (promotion.getCashbackValue().compareTo(BigDecimal.ZERO) > 0) {
                     rawRewardValue = amount.divide(promotion.getCashbackValue(), 2, RoundingMode.HALF_UP);
-                    exchangeRate = exchangeRateService.getMileValueRate(promotion.getBankCode(), customRates);
-                    rawUnit = "航空哩程";
-                    rateSource = exchangeRateService.getRateSource("MILES", promotion.getBankCode(), customRates);
-                    note = String.format("航空哩程 × %s TWD/哩", exchangeRate.toPlainString());
+                    ExchangeRateService.ExchangeRateResolution resolution =
+                            exchangeRateService.resolveRewardRate("MILES", promotion, customRates);
+                    exchangeRate = resolution.rate();
+                    rawUnit = resolution.unit();
+                    rateSource = resolution.source();
+                    note = resolution.note();
                 }
             }
             case "POINTS" -> {
                 rawRewardValue = isPointsFixedBonus(promotion.getCashbackValue())
                         ? promotion.getCashbackValue()
                         : amount.multiply(promotion.getCashbackValue()).divide(ONE_HUNDRED, 2, RoundingMode.HALF_UP);
-                exchangeRate = exchangeRateService.getPointValueRate(promotion.getBankCode(), customRates);
-                rawUnit = "點數";
-                rateSource = exchangeRateService.getRateSource("POINTS", promotion.getBankCode(), customRates);
-                note = String.format("點數 × %s TWD/點", exchangeRate.toPlainString());
+                ExchangeRateService.ExchangeRateResolution resolution =
+                        exchangeRateService.resolveRewardRate("POINTS", promotion, customRates);
+                exchangeRate = resolution.rate();
+                rawUnit = resolution.unit();
+                rateSource = resolution.source();
+                note = resolution.note();
             }
-            case "FIXED" -> {
-                rawRewardValue = promotion.getCashbackValue();
-                rawUnit = "TWD";
+            case "FIXED" -> rawRewardValue = promotion.getCashbackValue();
+            default -> {
             }
         }
 
@@ -82,8 +83,12 @@ public class RewardCalculator {
         if (promotion.getMaxCashback() != null && promotion.getMaxCashback() > 0) {
             int ntdCapLimit = switch (promotion.getCashbackType().toUpperCase()) {
                 case "PERCENT", "FIXED" -> promotion.getMaxCashback();
-                case "POINTS" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(exchangeRateService.getPointValueRate(promotion.getBankCode(), customRates)).intValue();
-                case "MILES" -> BigDecimal.valueOf(promotion.getMaxCashback()).multiply(exchangeRateService.getMileValueRate(promotion.getBankCode(), customRates)).intValue();
+                case "POINTS" -> BigDecimal.valueOf(promotion.getMaxCashback())
+                        .multiply(exchangeRateService.getPointValueRateForPromotion(promotion, customRates))
+                        .intValue();
+                case "MILES" -> BigDecimal.valueOf(promotion.getMaxCashback())
+                        .multiply(exchangeRateService.getMileValueRateForPromotion(promotion, customRates))
+                        .intValue();
                 default -> promotion.getMaxCashback();
             };
             cappedReturn = Math.min(rawRewardIntVal, ntdCapLimit);
@@ -110,7 +115,9 @@ public class RewardCalculator {
             return null;
         }
 
-        if (!isVariableReward(variablePromotion) || variablePromotion.getCashbackValue() == null || variablePromotion.getCashbackValue().compareTo(BigDecimal.ZERO) <= 0) {
+        if (!isVariableReward(variablePromotion)
+                || variablePromotion.getCashbackValue() == null
+                || variablePromotion.getCashbackValue().compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
@@ -118,8 +125,10 @@ public class RewardCalculator {
 
         return switch (variablePromotion.getCashbackType().toUpperCase()) {
             case "MILES" -> {
-                BigDecimal mileValue = exchangeRateService.getMileValueRate(variablePromotion.getBankCode(), customRates);
-                if (mileValue.compareTo(BigDecimal.ZERO) <= 0) yield null;
+                BigDecimal mileValue = exchangeRateService.getMileValueRateForPromotion(variablePromotion, customRates);
+                if (mileValue.compareTo(BigDecimal.ZERO) <= 0) {
+                    yield null;
+                }
                 yield fixedNtdValue.multiply(variablePromotion.getCashbackValue())
                         .divide(mileValue, 0, RoundingMode.CEILING)
                         .intValue();
@@ -128,10 +137,12 @@ public class RewardCalculator {
                     .divide(variablePromotion.getCashbackValue(), 0, RoundingMode.CEILING)
                     .intValue();
             case "POINTS" -> {
-                BigDecimal ptValue = exchangeRateService.getPointValueRate(variablePromotion.getBankCode(), customRates);
-                if (ptValue.compareTo(BigDecimal.ZERO) <= 0) yield null;
+                BigDecimal pointValue = exchangeRateService.getPointValueRateForPromotion(variablePromotion, customRates);
+                if (pointValue.compareTo(BigDecimal.ZERO) <= 0) {
+                    yield null;
+                }
                 yield fixedNtdValue.multiply(ONE_HUNDRED)
-                        .divide(variablePromotion.getCashbackValue().multiply(ptValue), 0, RoundingMode.CEILING)
+                        .divide(variablePromotion.getCashbackValue().multiply(pointValue), 0, RoundingMode.CEILING)
                         .intValue();
             }
             default -> null;
@@ -143,7 +154,9 @@ public class RewardCalculator {
             return null;
         }
 
-        if (!isVariableReward(promotion) || promotion.getCashbackValue() == null || promotion.getCashbackValue().compareTo(BigDecimal.ZERO) <= 0) {
+        if (!isVariableReward(promotion)
+                || promotion.getCashbackValue() == null
+                || promotion.getCashbackValue().compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
 
@@ -164,7 +177,8 @@ public class RewardCalculator {
         if (promotion.getCashbackType() == null) {
             return false;
         }
-        if ("PERCENT".equalsIgnoreCase(promotion.getCashbackType()) || "MILES".equalsIgnoreCase(promotion.getCashbackType())) {
+        if ("PERCENT".equalsIgnoreCase(promotion.getCashbackType())
+                || "MILES".equalsIgnoreCase(promotion.getCashbackType())) {
             return true;
         }
         return "POINTS".equalsIgnoreCase(promotion.getCashbackType())

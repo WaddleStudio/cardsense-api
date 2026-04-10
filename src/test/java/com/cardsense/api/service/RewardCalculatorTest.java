@@ -1,13 +1,17 @@
 package com.cardsense.api.service;
 
 import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class RewardCalculatorTest {
@@ -17,9 +21,50 @@ public class RewardCalculatorTest {
     @BeforeEach
     public void setup() {
         ExchangeRateService mockRateService = org.mockito.Mockito.mock(ExchangeRateService.class);
-        org.mockito.Mockito.when(mockRateService.getPointValueRate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(BigDecimal.ONE);
-        org.mockito.Mockito.when(mockRateService.getMileValueRate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(new BigDecimal("0.40"));
-        org.mockito.Mockito.when(mockRateService.getRateSource(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn("SYSTEM_DEFAULT");
+        org.mockito.Mockito.when(mockRateService.getPointValueRate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenReturn(BigDecimal.ONE);
+        org.mockito.Mockito.when(mockRateService.getPointValueRateForPromotion(
+                org.mockito.ArgumentMatchers.any(Promotion.class),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenReturn(BigDecimal.ONE);
+        org.mockito.Mockito.when(mockRateService.getMileValueRate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenReturn(new BigDecimal("0.40"));
+        org.mockito.Mockito.when(mockRateService.getMileValueRateForPromotion(
+                org.mockito.ArgumentMatchers.any(Promotion.class),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenReturn(new BigDecimal("0.40"));
+        org.mockito.Mockito.when(mockRateService.getRateSource(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenReturn("SYSTEM_DEFAULT");
+        org.mockito.Mockito.when(mockRateService.resolveRewardRate(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.any(Promotion.class),
+                org.mockito.ArgumentMatchers.<Map<String, BigDecimal>>any()
+        )).thenAnswer(invocation -> {
+            String rewardType = invocation.getArgument(0, String.class);
+            if ("MILES".equalsIgnoreCase(rewardType)) {
+                return new ExchangeRateService.ExchangeRateResolution(
+                        "MILES._DEFAULT",
+                        new BigDecimal("0.40"),
+                        "SYSTEM_DEFAULT",
+                        "航空哩程",
+                        "保守估值"
+                );
+            }
+            return new ExchangeRateService.ExchangeRateResolution(
+                    "POINTS._DEFAULT",
+                    BigDecimal.ONE,
+                    "SYSTEM_DEFAULT",
+                    "點數",
+                    "預設 1:1"
+            );
+        });
         calculator = new RewardCalculator(mockRateService);
     }
 
@@ -132,6 +177,53 @@ public class RewardCalculatorTest {
         assertNull(calculator.calculateBreakEvenAmount(fixedPromo, pointsBonusPromo, java.util.Map.of()));
     }
 
+    @Test
+    public void testMilesRewardUsesProgramSpecificRateForCathayEvaCard() {
+        ExchangeRateService rateService = new ExchangeRateService();
+        rateService.init();
+        RewardCalculator realCalculator = new RewardCalculator(rateService);
+
+        Promotion promo = milesPromotion(
+                "CATHAY",
+                "CATHAY_EVA",
+                "國泰世華長榮航空聯名卡",
+                "國外消費最優 NT$10 累積 1 里",
+                null
+        );
+
+        RewardCalculator.RewardCalculationResult result = realCalculator.calculateReward(promo, 1000, Map.of());
+
+        assertEquals(50, result.getCappedReturn());
+        assertNotNull(result.getRewardDetail());
+        assertEquals("長榮無限萬哩遊", result.getRewardDetail().getRawUnit());
+    }
+
+    @Test
+    public void testMilesRewardUsesProfileOverrideResolvedFromPromotionMetadata() {
+        ExchangeRateService rateService = new ExchangeRateService();
+        rateService.init();
+        RewardCalculator realCalculator = new RewardCalculator(rateService);
+
+        Promotion promo = milesPromotion(
+                "TAISHIN",
+                "TAISHIN_CG003",
+                "台新國泰航空聯名卡",
+                "指定類別最優 NT$10 累積 1 亞洲萬里通里數",
+                List.of(PromotionCondition.builder().type("TEXT").label("累積亞洲萬里通里數").value("累積亞洲萬里通里數").build())
+        );
+
+        RewardCalculator.RewardCalculationResult result = realCalculator.calculateReward(
+                promo,
+                1000,
+                Map.of("MILES.ASIA_MILES", new BigDecimal("0.65"))
+        );
+
+        assertEquals(65, result.getCappedReturn());
+        assertNotNull(result.getRewardDetail());
+        assertEquals("亞洲萬里通", result.getRewardDetail().getRawUnit());
+        assertEquals("USER_CUSTOM", result.getRewardDetail().getExchangeRateSource());
+    }
+
     // --- Helpers ---
 
     private Promotion promotion(String cashbackType, BigDecimal cashbackValue, Integer maxCashback, Integer minAmount) {
@@ -151,6 +243,26 @@ public class RewardCalculatorTest {
                 .cardStatus("ACTIVE")
                 .validUntil(LocalDate.of(2026, 12, 31))
                 .status("ACTIVE")
+                .build();
+    }
+
+    private Promotion milesPromotion(String bankCode, String cardCode, String cardName, String title, List<PromotionCondition> conditions) {
+        return Promotion.builder()
+                .promoId("test-promo")
+                .promoVersionId("test-ver-001")
+                .title(title)
+                .cardCode(cardCode)
+                .cardName(cardName)
+                .bankCode(bankCode)
+                .bankName("Test Bank")
+                .category("OVERSEAS")
+                .recommendationScope("RECOMMENDABLE")
+                .cashbackType("MILES")
+                .cashbackValue(BigDecimal.TEN)
+                .cardStatus("ACTIVE")
+                .validUntil(LocalDate.of(2026, 12, 31))
+                .status("ACTIVE")
+                .conditions(conditions)
                 .build();
     }
 }

@@ -1,5 +1,7 @@
 package com.cardsense.api.service;
 
+import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -14,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -31,6 +34,7 @@ public class ExchangeRateService {
 
     /** key = "POINTS.CTBC" or "MILES._DEFAULT", value = rate in TWD */
     private final Map<String, BigDecimal> systemRates = new HashMap<>();
+    private final Map<String, ExchangeRateEntry> systemRateEntries = new HashMap<>();
 
     /** For the GET /v1/exchange-rates endpoint */
     private final List<ExchangeRateEntry> rateEntries = new ArrayList<>();
@@ -56,70 +60,101 @@ public class ExchangeRateService {
         this.version = root.has("version") ? root.get("version").asText() : "unknown";
 
         JsonNode rates = root.get("rates");
-        if (rates == null) return;
+        if (rates == null) {
+            return;
+        }
 
         Iterator<Map.Entry<String, JsonNode>> typeIterator = rates.properties().iterator();
         while (typeIterator.hasNext()) {
             Map.Entry<String, JsonNode> typeEntry = typeIterator.next();
-            String rewardType = typeEntry.getKey(); // "POINTS" or "MILES"
+            String rewardType = typeEntry.getKey();
             JsonNode bankNodes = typeEntry.getValue();
 
             Iterator<Map.Entry<String, JsonNode>> bankIterator = bankNodes.properties().iterator();
             while (bankIterator.hasNext()) {
                 Map.Entry<String, JsonNode> bankEntry = bankIterator.next();
-                String bankCode = bankEntry.getKey(); // "CTBC" or "_DEFAULT"
+                String bankCode = bankEntry.getKey();
                 JsonNode detail = bankEntry.getValue();
 
                 BigDecimal value = new BigDecimal(detail.get("value").asText());
                 String unit = detail.has("unit") ? detail.get("unit").asText() : rewardType;
                 String note = detail.has("note") ? detail.get("note").asText() : "";
 
-                String key = rewardType + "." + bankCode;
-                systemRates.put(key, value);
-                rateEntries.add(new ExchangeRateEntry(rewardType, bankCode, unit, value, note));
+                addRateEntry(rewardType, bankCode, unit, value, note);
             }
         }
     }
 
     private void initFallbackRates() {
         this.version = "fallback";
-        systemRates.put("POINTS._DEFAULT", FALLBACK_POINTS_RATE);
-        systemRates.put("MILES._DEFAULT", FALLBACK_MILES_RATE);
-        rateEntries.add(new ExchangeRateEntry("POINTS", "_DEFAULT", "點數", FALLBACK_POINTS_RATE, "預設 1:1"));
-        rateEntries.add(new ExchangeRateEntry("MILES", "_DEFAULT", "航空哩程", FALLBACK_MILES_RATE, "保守估值"));
+        addRateEntry("POINTS", "_DEFAULT", "點數", FALLBACK_POINTS_RATE, "預設 1:1");
+        addRateEntry("MILES", "_DEFAULT", "航空哩程", FALLBACK_MILES_RATE, "保守估值");
     }
 
     /**
      * Resolve the TWD value of 1 POINTS unit for a given bank.
      *
-     * @param bankCode  e.g. "CTBC", "ESUN"
-     * @param customRates  optional user overrides (nullable)
+     * @param bankCode e.g. "CTBC", "ESUN"
+     * @param customRates optional user overrides (nullable)
      */
     public BigDecimal getPointValueRate(String bankCode, Map<String, BigDecimal> customRates) {
         return resolveRate("POINTS", bankCode, customRates, FALLBACK_POINTS_RATE);
     }
 
+    public BigDecimal getPointValueRateForPromotion(Promotion promotion, Map<String, BigDecimal> customRates) {
+        return resolveRewardRate("POINTS", promotion, customRates).rate();
+    }
+
     /**
      * Resolve the TWD value of 1 MILES unit.
      *
-     * @param bankCode  bank code (currently not bank-differentiated, uses _DEFAULT)
-     * @param customRates  optional user overrides (nullable)
+     * @param bankCode bank code (or resolved miles profile key)
+     * @param customRates optional user overrides (nullable)
      */
     public BigDecimal getMileValueRate(String bankCode, Map<String, BigDecimal> customRates) {
         return resolveRate("MILES", bankCode, customRates, FALLBACK_MILES_RATE);
+    }
+
+    public BigDecimal getMileValueRateForPromotion(Promotion promotion, Map<String, BigDecimal> customRates) {
+        return resolveRewardRate("MILES", promotion, customRates).rate();
     }
 
     /**
      * Checks whether the rate was overridden by the user.
      */
     public String getRateSource(String rewardType, String bankCode, Map<String, BigDecimal> customRates) {
-        if (customRates == null || customRates.isEmpty()) return "SYSTEM_DEFAULT";
-        String specificKey = rewardType + "." + bankCode;
+        if (customRates == null || customRates.isEmpty()) {
+            return "SYSTEM_DEFAULT";
+        }
+        String normalizedCode = normalizeCode(bankCode);
+        String specificKey = rewardType + "." + normalizedCode;
         String defaultKey = rewardType + "._DEFAULT";
         if (customRates.containsKey(specificKey) || customRates.containsKey(defaultKey)) {
             return "USER_CUSTOM";
         }
         return "SYSTEM_DEFAULT";
+    }
+
+    public String getRateSourceForPromotion(String rewardType, Promotion promotion, Map<String, BigDecimal> customRates) {
+        return getRateSource(rewardType, resolveRewardCode(rewardType, promotion), customRates);
+    }
+
+    public ExchangeRateResolution resolveRewardRate(String rewardType, Promotion promotion, Map<String, BigDecimal> customRates) {
+        String resolvedCode = resolveRewardCode(rewardType, promotion);
+        BigDecimal fallback = "MILES".equalsIgnoreCase(rewardType) ? FALLBACK_MILES_RATE : FALLBACK_POINTS_RATE;
+        String resolvedKey = resolveRateKey(rewardType, resolvedCode, customRates);
+        ExchangeRateEntry entry = systemRateEntries.get(resolvedKey);
+        if (entry == null) {
+            entry = systemRateEntries.get(rewardType + "._DEFAULT");
+        }
+
+        return new ExchangeRateResolution(
+                resolvedKey,
+                resolveRate(rewardType, resolvedCode, customRates, fallback),
+                getRateSource(rewardType, resolvedCode, customRates),
+                entry != null ? entry.unit() : defaultUnitFor(rewardType),
+                entry != null ? entry.note() : ""
+        );
     }
 
     /**
@@ -129,34 +164,137 @@ public class ExchangeRateService {
         return new ExchangeRateResponse(version, rateEntries);
     }
 
+    String resolveRewardCode(String rewardType, Promotion promotion) {
+        if (promotion == null) {
+            return "_DEFAULT";
+        }
+        if ("MILES".equalsIgnoreCase(rewardType)) {
+            return resolveMilesProgramCode(promotion);
+        }
+        return normalizeCode(promotion.getBankCode());
+    }
+
     private BigDecimal resolveRate(String rewardType, String bankCode, Map<String, BigDecimal> customRates, BigDecimal fallback) {
-        // Priority 1: user custom rate for specific bank
+        String resolvedKey = resolveRateKey(rewardType, bankCode, customRates);
+        if (resolvedKey == null) {
+            return fallback;
+        }
+
+        if (customRates != null && customRates.containsKey(resolvedKey)) {
+            return customRates.get(resolvedKey);
+        }
+
+        BigDecimal systemRate = systemRates.get(resolvedKey);
+        return systemRate != null ? systemRate : fallback;
+    }
+
+    private String resolveRateKey(String rewardType, String bankCode, Map<String, BigDecimal> customRates) {
+        String normalizedCode = normalizeCode(bankCode);
+        String specificKey = rewardType + "." + normalizedCode;
+        String defaultKey = rewardType + "._DEFAULT";
+
         if (customRates != null && !customRates.isEmpty()) {
-            String specificKey = rewardType + "." + (bankCode != null ? bankCode.toUpperCase() : "_DEFAULT");
             if (customRates.containsKey(specificKey)) {
-                return customRates.get(specificKey);
+                return specificKey;
             }
-            // Priority 2: user custom rate for default
-            String defaultKey = rewardType + "._DEFAULT";
             if (customRates.containsKey(defaultKey)) {
-                return customRates.get(defaultKey);
+                return defaultKey;
             }
         }
 
-        // Priority 3: system rate for specific bank
-        if (bankCode != null) {
-            String specificKey = rewardType + "." + bankCode.toUpperCase();
-            BigDecimal rate = systemRates.get(specificKey);
-            if (rate != null) return rate;
+        if (systemRates.containsKey(specificKey)) {
+            return specificKey;
+        }
+        if (systemRates.containsKey(defaultKey)) {
+            return defaultKey;
+        }
+        return null;
+    }
+
+    private void addRateEntry(String rewardType, String bankCode, String unit, BigDecimal value, String note) {
+        String key = rewardType + "." + bankCode;
+        ExchangeRateEntry entry = new ExchangeRateEntry(rewardType, bankCode, unit, value, note);
+        systemRates.put(key, value);
+        systemRateEntries.put(key, entry);
+        rateEntries.add(entry);
+    }
+
+    private String resolveMilesProgramCode(Promotion promotion) {
+        List<String> signals = collectPromotionSignals(promotion);
+
+        if (containsAnySignal(signals, "EVA_INFINITY", "CATHAY_EVA", "EVA_AIR", "長榮", "INFINITY MILEAGELANDS")) {
+            return "EVA_INFINITY";
+        }
+        if (containsAnySignal(signals, "ASIA_MILES", "亞洲萬里通", "ASIA MILES")) {
+            return "ASIA_MILES";
+        }
+        if (containsAnySignal(signals, "JALPAK", "JAL", "日本航空", "日航")) {
+            return "JALPAK";
         }
 
-        // Priority 4: system default rate
-        BigDecimal defaultRate = systemRates.get(rewardType + "._DEFAULT");
-        return defaultRate != null ? defaultRate : fallback;
+        return normalizeCode(promotion.getBankCode());
+    }
+
+    private List<String> collectPromotionSignals(Promotion promotion) {
+        List<String> signals = new ArrayList<>();
+        addSignal(signals, promotion.getBankCode());
+        addSignal(signals, promotion.getCardCode());
+        addSignal(signals, promotion.getCardName());
+        addSignal(signals, promotion.getTitle());
+        addSignal(signals, promotion.getPlanId());
+
+        if (promotion.getConditions() != null) {
+            for (PromotionCondition condition : promotion.getConditions()) {
+                if (condition == null) {
+                    continue;
+                }
+                addSignal(signals, condition.getType());
+                addSignal(signals, condition.getValue());
+                addSignal(signals, condition.getLabel());
+            }
+        }
+
+        return signals;
+    }
+
+    private void addSignal(List<String> signals, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        signals.add(value.toUpperCase(Locale.ROOT));
+    }
+
+    private boolean containsAnySignal(List<String> signals, String... tokens) {
+        for (String signal : signals) {
+            for (String token : tokens) {
+                if (signal.contains(token.toUpperCase(Locale.ROOT))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String normalizeCode(String code) {
+        if (code == null || code.isBlank()) {
+            return "_DEFAULT";
+        }
+        return code.toUpperCase(Locale.ROOT);
+    }
+
+    private String defaultUnitFor(String rewardType) {
+        if ("MILES".equalsIgnoreCase(rewardType)) {
+            return "航空哩程";
+        }
+        if ("POINTS".equalsIgnoreCase(rewardType)) {
+            return "點數";
+        }
+        return rewardType;
     }
 
     // --- Response DTOs for the endpoint ---
 
     public record ExchangeRateEntry(String type, String bank, String unit, BigDecimal value, String note) {}
     public record ExchangeRateResponse(String version, List<ExchangeRateEntry> rates) {}
+    public record ExchangeRateResolution(String key, BigDecimal rate, String source, String unit, String note) {}
 }
