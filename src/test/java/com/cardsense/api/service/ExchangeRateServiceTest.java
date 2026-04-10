@@ -1,9 +1,12 @@
 package com.cardsense.api.service;
 
+import com.cardsense.api.domain.Promotion;
+import com.cardsense.api.domain.PromotionCondition;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +54,54 @@ class ExchangeRateServiceTest {
 
         assertEquals(0, new BigDecimal("1.0").compareTo(service.getPointValueRate("UNKNOWN_BANK", Map.of())));
         assertEquals(0, new BigDecimal("0.40").compareTo(service.getMileValueRate("UNKNOWN_BANK", Map.of())));
+    }
+
+    @Test
+    void resolvesAsiaMilesFromCathayPacificPromotionSignals() {
+        ExchangeRateService service = new ExchangeRateService();
+        service.init();
+
+        Promotion promotion = Promotion.builder()
+                .bankCode("TAISHIN")
+                .cardCode("TAISHIN_CX_WORLD")
+                .cardName("台新國泰航空聯名卡")
+                .title("國泰航空官網購票最優 NT$5 累積 1 里數")
+                .conditions(List.of(
+                        PromotionCondition.builder().type("VENUE").value("CATHAY_PACIFIC").label("國泰航空").build()
+                ))
+                .build();
+
+        assertEquals("ASIA_MILES", service.resolveRewardCode("MILES", promotion));
+        assertEquals(
+                0,
+                new BigDecimal("0.66").compareTo(
+                        service.getMileValueRateForPromotion(promotion, Map.of("MILES.ASIA_MILES", new BigDecimal("0.66")))
+                )
+        );
+    }
+
+    @Test
+    void resolvesJalpakFromJapanAirlinesAliases() {
+        ExchangeRateService service = new ExchangeRateService();
+        service.init();
+
+        Promotion promotion = Promotion.builder()
+                .bankCode("ESUN")
+                .cardCode("ESUN_TRAVEL_JP")
+                .cardName("Travel Rewards Card")
+                .title("Japan Airlines official site spending earns 1 mile per NT$10")
+                .conditions(List.of(
+                        PromotionCondition.builder().type("VENUE").value("JAPAN_AIRLINES").label("Japan Airlines").build()
+                ))
+                .build();
+
+        assertEquals("JALPAK", service.resolveRewardCode("MILES", promotion));
+        assertEquals(
+                0,
+                new BigDecimal("0.72").compareTo(
+                        service.getMileValueRateForPromotion(promotion, Map.of("MILES.JALPAK", new BigDecimal("0.72")))
+                )
+        );
     }
 
     private static void assertRate(

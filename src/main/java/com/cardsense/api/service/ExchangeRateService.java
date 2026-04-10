@@ -222,13 +222,41 @@ public class ExchangeRateService {
     private String resolveMilesProgramCode(Promotion promotion) {
         List<String> signals = collectPromotionSignals(promotion);
 
-        if (containsAnySignal(signals, "EVA_INFINITY", "CATHAY_EVA", "EVA_AIR", "長榮", "INFINITY MILEAGELANDS")) {
+        if (containsAnySignal(
+                signals,
+                "EVA_INFINITY",
+                "CATHAY_EVA",
+                "EVA_AIR",
+                "EVA AIR",
+                "EVA_AIRLINES",
+                "長榮",
+                "INFINITY MILEAGELANDS"
+        )) {
             return "EVA_INFINITY";
         }
-        if (containsAnySignal(signals, "ASIA_MILES", "亞洲萬里通", "ASIA MILES")) {
+        if (containsAnySignal(
+                signals,
+                "ASIA_MILES",
+                "ASIA MILES",
+                "亞洲萬里通",
+                "CATHAY PACIFIC",
+                "CATHAY_PACIFIC",
+                "CATHAY AIRWAYS",
+                "國泰航空",
+                "CX"
+        )) {
             return "ASIA_MILES";
         }
-        if (containsAnySignal(signals, "JALPAK", "JAL", "日本航空", "日航")) {
+        if (containsAnySignal(
+                signals,
+                "JALPAK",
+                "JAL",
+                "JAPAN AIRLINES",
+                "JAPAN_AIRLINES",
+                "JAL MILEAGE BANK",
+                "日本航空",
+                "日航"
+        )) {
             return "JALPAK";
         }
 
