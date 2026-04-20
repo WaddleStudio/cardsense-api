@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -222,6 +223,11 @@ public class DecisionEngine {
         }
 
         if (!matchesRegistrationState(promotion, request)) {
+            return false;
+        }
+
+        LocalDate effectiveDate = request.getResolvedDate() != null ? request.getResolvedDate() : LocalDate.now();
+        if (!matchesDateConditions(promotion, effectiveDate)) {
             return false;
         }
 
@@ -1308,6 +1314,57 @@ public class DecisionEngine {
         return request.getRegisteredPromotionIds().stream()
                 .map(this::normalizeValue)
                 .anyMatch(promotionKey::equals);
+    }
+
+    private boolean matchesDateConditions(Promotion promotion, LocalDate requestDate) {
+        List<PromotionCondition> conditions = promotion.getConditions();
+        if (conditions == null || conditions.isEmpty()) {
+            return true;
+        }
+
+        List<String> dayOfMonthValues = conditions.stream()
+                .filter(c -> "DAY_OF_MONTH".equalsIgnoreCase(c.getType()))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
+                .filter(v -> !v.isBlank())
+                .toList();
+
+        if (!dayOfMonthValues.isEmpty()) {
+            int dom = requestDate.getDayOfMonth();
+            boolean matches = dayOfMonthValues.stream().anyMatch(v -> {
+                try { return Integer.parseInt(v) == dom; } catch (NumberFormatException e) { return false; }
+            });
+            if (!matches) return false;
+        }
+
+        List<String> dayOfWeekValues = conditions.stream()
+                .filter(c -> "DAY_OF_WEEK".equalsIgnoreCase(c.getType()))
+                .map(PromotionCondition::getValue)
+                .map(this::normalizeValue)
+                .filter(v -> !v.isBlank())
+                .toList();
+
+        if (!dayOfWeekValues.isEmpty()) {
+            DayOfWeek dow = requestDate.getDayOfWeek();
+            boolean matches = dayOfWeekValues.stream().anyMatch(v -> matchesDayOfWeek(v, dow));
+            if (!matches) return false;
+        }
+
+        return true;
+    }
+
+    private boolean matchesDayOfWeek(String value, DayOfWeek dow) {
+        return switch (value.toUpperCase()) {
+            case "MON" -> dow == DayOfWeek.MONDAY;
+            case "TUE" -> dow == DayOfWeek.TUESDAY;
+            case "WED" -> dow == DayOfWeek.WEDNESDAY;
+            case "THU" -> dow == DayOfWeek.THURSDAY;
+            case "FRI" -> dow == DayOfWeek.FRIDAY;
+            case "SAT" -> dow == DayOfWeek.SATURDAY;
+            case "SUN" -> dow == DayOfWeek.SUNDAY;
+            case "WEEKEND" -> dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY;
+            default -> false;
+        };
     }
 
     private boolean hasExhaustedBenefit(Promotion promotion, RecommendationRequest request) {

@@ -424,6 +424,114 @@ class DecisionEngineTest {
         assertEquals(33, response.getRecommendations().get(0).getEstimatedReturn());
     }
 
+    @Test
+    void dayOfMonthConditionIncludesPromoOnMatchingDay() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_MONTH", "13", "每月13號")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 13))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+    }
+
+    @Test
+    void dayOfMonthConditionExcludesPromoOnNonMatchingDay() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_MONTH", "13", "每月13號")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 20))
+                .build());
+
+        assertEquals(0, response.getRecommendations().size());
+    }
+
+    @Test
+    void dayOfWeekConditionIncludesPromoOnMatchingWeekday() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_WEEK", "WED", "每週三")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        // 2026-04-15 is a Wednesday
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 15))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+    }
+
+    @Test
+    void dayOfWeekConditionExcludesPromoOnNonMatchingWeekday() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_WEEK", "WED", "每週三")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        // 2026-04-20 is a Monday
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 20))
+                .build());
+
+        assertEquals(0, response.getRecommendations().size());
+    }
+
+    @Test
+    void weekendConditionIncludesPromoOnSaturday() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_WEEK", "WEEKEND", "週末限定")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        // 2026-04-18 is a Saturday
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 18))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+    }
+
+    @Test
+    void weekendConditionExcludesPromoOnWeekday() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setConditions(List.of(condition("DAY_OF_WEEK", "WEEKEND", "週末限定")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        // 2026-04-20 is a Monday
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 20))
+                .build());
+
+        assertEquals(0, response.getRecommendations().size());
+    }
+
+    @Test
+    void promoWithNullDateConditionAlwaysPasses() {
+        Promotion promo = buildPromotion("promo1", "ver1", "CARD_A", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .amount(1000)
+                .category("ONLINE")
+                .date(LocalDate.of(2026, 4, 20))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+    }
+
     private BenefitPlan activeCubePlan(String planId) {
         return BenefitPlan.builder()
                 .planId(planId)
