@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +45,30 @@ public class DecisionEngine {
     );
     private static final Set<String> PAYMENT_CONDITION_TYPES = Set.of(
             "PAYMENT"
+    );
+    private static final Map<String, String> HIGH_FREQUENCY_MERCHANT_ALIASES = Map.ofEntries(
+            Map.entry("全聯", "PXMART"),
+            Map.entry("全聯福利中心", "PXMART"),
+            Map.entry("大全聯", "PXMART"),
+            Map.entry("PX MART", "PXMART"),
+            Map.entry("PXMART", "PXMART"),
+            Map.entry("家樂福", "CARREFOUR"),
+            Map.entry("CARREFOUR", "CARREFOUR"),
+            Map.entry("MOMO", "MOMO"),
+            Map.entry("蝦皮", "SHOPEE"),
+            Map.entry("蝦皮購物", "SHOPEE"),
+            Map.entry("SHOPEE", "SHOPEE"),
+            Map.entry("麥當勞", "MCDONALD"),
+            Map.entry("MCDONALD", "MCDONALD"),
+            Map.entry("MCDONALDS", "MCDONALD"),
+            Map.entry("星巴克", "STARBUCKS"),
+            Map.entry("STARBUCKS", "STARBUCKS"),
+            Map.entry("寶雅", "POYA"),
+            Map.entry("POYA", "POYA"),
+            Map.entry("AGODA", "AGODA"),
+            Map.entry("UBER EATS", "UBER_EATS"),
+            Map.entry("UBEREATS", "UBER_EATS"),
+            Map.entry("UBER_EATS", "UBER_EATS")
     );
     private static final Set<String> MOBILE_PAY_PLATFORM_VALUES = Set.of(
             "MOBILE_PAY",
@@ -1201,18 +1226,18 @@ public class DecisionEngine {
     }
 
     private boolean hasMerchantMatchingVenueCondition(Promotion promotion, RecommendationRequest request) {
-        String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
-        if (normalizedMerchant.isBlank()) {
+        Set<String> merchantTokens = expandMerchantTokens(request.getResolvedMerchantName());
+        if (merchantTokens.isEmpty()) {
             return false;
         }
-        List<String> merchantTokens = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
-        return !merchantTokens.isEmpty() && merchantTokens.stream().anyMatch(normalizedMerchant::equals);
+        List<String> conditionTokens = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
+        return !conditionTokens.isEmpty() && conditionTokens.stream().anyMatch(merchantTokens::contains);
     }
 
     private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
-        String normalizedMerchant = normalizeValue(request.getResolvedMerchantName());
+        Set<String> normalizedMerchantTokens = expandMerchantTokens(request.getResolvedMerchantName());
         List<String> merchantValues = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
-        if (!merchantValues.isEmpty() && (normalizedMerchant.isBlank() || merchantValues.stream().noneMatch(normalizedMerchant::equals))) {
+        if (!merchantValues.isEmpty() && (normalizedMerchantTokens.isEmpty() || merchantValues.stream().noneMatch(normalizedMerchantTokens::contains))) {
             return false;
         }
 
@@ -1222,14 +1247,29 @@ public class DecisionEngine {
         }
 
         Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
-        if (!normalizedMerchant.isBlank()) {
-            normalizedPaymentMethods.add(normalizedMerchant);
-        }
+        normalizedPaymentMethods.addAll(normalizedMerchantTokens);
         if (normalizedPaymentMethods.isEmpty()) {
             return false;
         }
 
         return paymentValues.stream().anyMatch(normalizedPaymentMethods::contains);
+    }
+
+    private Set<String> expandMerchantTokens(String merchantName) {
+        String normalizedMerchant = normalizeValue(merchantName);
+        if (normalizedMerchant.isBlank()) {
+            return new HashSet<>();
+        }
+
+        Set<String> values = new HashSet<>();
+        values.add(normalizedMerchant);
+
+        String canonical = HIGH_FREQUENCY_MERCHANT_ALIASES.get(normalizedMerchant);
+        if (canonical != null && !canonical.isBlank()) {
+            values.add(canonical);
+        }
+
+        return values;
     }
 
     private List<String> getNormalizedConditionValues(Promotion promotion, Set<String> allowedTypes) {

@@ -189,6 +189,47 @@ class DecisionEngineTest {
     }
 
     @Test
+    void recommendCanonicalizesHighFrequencyMerchantAliasesAcrossBanks() {
+        Promotion cathayPromo = buildPromotion("promo-cathay", "ver-cathay", "CATHAY_CUBE", BigDecimal.valueOf(3.0), 500, LocalDate.of(2026, 6, 30));
+        cathayPromo.setBankCode("CATHAY");
+        cathayPromo.setCategory("GROCERY");
+        cathayPromo.setSubcategory("SUPERMARKET");
+        cathayPromo.setConditions(List.of(condition("VENUE", "PXMART", "PX Mart")));
+
+        Promotion esunPromo = buildPromotion("promo-esun", "ver-esun", "ESUN_UNICARD", BigDecimal.valueOf(4.0), 500, LocalDate.of(2026, 6, 30));
+        esunPromo.setBankCode("ESUN");
+        esunPromo.setCategory("GROCERY");
+        esunPromo.setSubcategory("SUPERMARKET");
+        esunPromo.setConditions(List.of(condition("VENUE", "PXMART", "全聯福利中心")));
+
+        Promotion taishinPromo = buildPromotion("promo-taishin", "ver-taishin", "TAISHIN_PX_MART", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        taishinPromo.setBankCode("TAISHIN");
+        taishinPromo.setCategory("GROCERY");
+        taishinPromo.setSubcategory("SUPERMARKET");
+        taishinPromo.setConditions(List.of(condition("VENUE", "PXMART", "大全聯")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(cathayPromo, esunPromo, taishinPromo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .subcategory("SUPERMARKET")
+                        .merchantName("全聯")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertEquals(3, response.getRecommendations().size());
+        assertEquals(
+                List.of("TAISHIN", "ESUN", "CATHAY"),
+                response.getRecommendations().stream()
+                        .map(recommendation -> recommendation.getBankCode())
+                        .toList()
+        );
+    }
+
+    @Test
     void recommendMatchesPaymentPlatformConditionViaPaymentMethod() {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
         promo.setConditions(List.of(condition("PAYMENT", "LINE_PAY", "LINE Pay")));
