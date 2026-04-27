@@ -230,6 +230,29 @@ class DecisionEngineTest {
     }
 
     @Test
+    void recommendCanonicalizesJapaneseRewardMerchantAliases() {
+        Promotion promo = buildPromotion("promo-sushiro", "ver-sushiro", "CATHAY_CUBE", BigDecimal.valueOf(8.0), 500, LocalDate.of(2026, 4, 30));
+        promo.setBankCode("CATHAY");
+        promo.setCategory("DINING");
+        promo.setSubcategory("RESTAURANT");
+        promo.setConditions(List.of(condition("VENUE", "SUSHIRO", "台灣壽司郎")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("DINING")
+                        .subcategory("RESTAURANT")
+                        .merchantName("壽司郎")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertEquals(1, response.getRecommendations().size());
+        assertEquals("promo-sushiro", response.getRecommendations().get(0).getPromotionId());
+    }
+
+    @Test
     void recommendMatchesPaymentPlatformConditionViaPaymentMethod() {
         Promotion promo = buildPromotion("promo1", "ver1", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
         promo.setConditions(List.of(condition("PAYMENT", "LINE_PAY", "LINE Pay")));
