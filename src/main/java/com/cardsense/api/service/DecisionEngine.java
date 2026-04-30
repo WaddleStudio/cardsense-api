@@ -66,6 +66,20 @@ public class DecisionEngine {
             Map.entry("寶雅", "POYA"),
             Map.entry("POYA", "POYA"),
             Map.entry("AGODA", "AGODA"),
+            Map.entry("壽司郎", "SUSHIRO"),
+            Map.entry("台灣壽司郎", "SUSHIRO"),
+            Map.entry("SUSHIRO", "SUSHIRO"),
+            Map.entry("DONKI", "DON_DON_DONKI"),
+            Map.entry("DON DON DONKI", "DON_DON_DONKI"),
+            Map.entry("台灣DON DON DONKI", "DON_DON_DONKI"),
+            Map.entry("GU", "GU"),
+            Map.entry("UNIQLO", "UNIQLO"),
+            Map.entry("GO TAXI", "GO_TAXI_JP"),
+            Map.entry("GO TAXI APP", "GO_TAXI_JP"),
+            Map.entry("日本GO TAXI APP", "GO_TAXI_JP"),
+            Map.entry("桃園機場捷運", "TAOYUAN_AIRPORT_MRT"),
+            Map.entry("機場捷運", "TAOYUAN_AIRPORT_MRT"),
+            Map.entry("桃捷", "TAOYUAN_AIRPORT_MRT"),
             Map.entry("UBER EATS", "UBER_EATS"),
             Map.entry("UBEREATS", "UBER_EATS"),
             Map.entry("UBER_EATS", "UBER_EATS")
@@ -113,6 +127,7 @@ public class DecisionEngine {
     private final PromotionRepository promotionRepository;
     private final RewardCalculator rewardCalculator;
     private final BenefitPlanRepository benefitPlanRepository;
+    private final MerchantRegistry merchantRegistry;
 
     public RecommendationResponse recommend(RecommendationRequest request) {
         RecommendationScenario resolvedScenario = request.toResolvedScenario();
@@ -151,6 +166,7 @@ public class DecisionEngine {
                 .scenario(resolvedScenario)
                 .comparison(buildComparisonSummary(activePromotions.size(), scoredPromotions.size(), rankedCards.size(), breakEvenAnalyses))
                 .recommendations(recommendations)
+                .noResultReasons(buildNoResultReasons(activePromotions.size(), scoredPromotions.size(), rankedCards.size(), request))
                 .generatedAt(LocalDateTime.now())
                 .disclaimer(DISCLAIMER)
                 .build();
@@ -365,6 +381,9 @@ public class DecisionEngine {
                 .excludedConditions(promotion.getExcludedConditions())
                 .status(promotion.getStatus())
                 .planId(promotion.getPlanId())
+                .sourceUrl(promotion.getSourceUrl())
+                .extractedAt(promotion.getExtractedAt())
+                .confidence(promotion.getConfidence())
                 .build();
     }
 
@@ -428,6 +447,9 @@ public class DecisionEngine {
                 .excludedConditions(promotion.getExcludedConditions())
                 .status(promotion.getStatus())
                 .planId(promotion.getPlanId())
+                .sourceUrl(promotion.getSourceUrl())
+                .extractedAt(promotion.getExtractedAt())
+                .confidence(promotion.getConfidence())
                 .build();
     }
 
@@ -496,6 +518,9 @@ public class DecisionEngine {
                 .excludedConditions(promotion.getExcludedConditions())
                 .status(promotion.getStatus())
                 .planId(activePlanId)
+                .sourceUrl(promotion.getSourceUrl())
+                .extractedAt(promotion.getExtractedAt())
+                .confidence(promotion.getConfidence())
                 .build();
     }
 
@@ -698,7 +723,7 @@ public class DecisionEngine {
         String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
         boolean hasMerchantOrPaymentConstraint = !normalizedMerchant.isBlank() || !normalizedPaymentMethod.isBlank();
 
-        if (!normalizedMerchant.isBlank() && !hasMatchingMerchantCondition(promotion, normalizedMerchant)) {
+        if (!normalizedMerchant.isBlank() && !hasMatchingMerchantCondition(promotion, request.getResolvedMerchantName())) {
             return false;
         }
 
@@ -714,9 +739,12 @@ public class DecisionEngine {
         return true;
     }
 
-    private boolean hasMatchingMerchantCondition(Promotion promotion, String normalizedMerchant) {
-        return getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES).stream()
-                .anyMatch(normalizedMerchant::equals);
+    private boolean hasMatchingMerchantCondition(Promotion promotion, String merchantName) {
+        Set<String> merchantTokens = expandMerchantTokens(merchantName);
+        if (merchantTokens.isEmpty()) {
+            return false;
+        }
+        return matchesAnyToken(getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES), merchantTokens);
     }
 
     private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod, String normalizedMerchant) {
@@ -1100,6 +1128,9 @@ public class DecisionEngine {
                 .conditions(recommendationConditions)
                 .promotionBreakdown(breakdown)
                 .applyUrl(promotion.getApplyUrl())
+                .sourceUrl(promotion.getSourceUrl())
+                .verifiedAt(promotion.getExtractedAt())
+                .confidence(promotion.getConfidence())
                 .activePlan(buildActivePlan(cardAggregate.winningPlan()))
                 .generalRewardOnly(isGeneralRewardOnly(cardAggregate))
                 .rewardDetail(cardAggregate.contributingPromotions().get(0).rewardDetail())
@@ -1197,7 +1228,13 @@ public class DecisionEngine {
         if (normalizedRequestChannel.isBlank()) {
             return true;
         }
-        return normalizeValue(promotion.getChannel()).equals(normalizedRequestChannel);
+        if ("ALL".equals(normalizedRequestChannel)) {
+            return true;
+        }
+        String normalizedPromotionChannel = normalizeValue(promotion.getChannel());
+        return normalizedPromotionChannel.isBlank()
+                || "ALL".equals(normalizedPromotionChannel)
+                || normalizedPromotionChannel.equals(normalizedRequestChannel);
     }
 
     private boolean matchesLocation(Promotion promotion, String requestLocation) {
@@ -1231,13 +1268,13 @@ public class DecisionEngine {
             return false;
         }
         List<String> conditionTokens = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
-        return !conditionTokens.isEmpty() && conditionTokens.stream().anyMatch(merchantTokens::contains);
+        return !conditionTokens.isEmpty() && matchesAnyToken(conditionTokens, merchantTokens);
     }
 
     private boolean matchesPlatformConditions(Promotion promotion, RecommendationRequest request) {
         Set<String> normalizedMerchantTokens = expandMerchantTokens(request.getResolvedMerchantName());
         List<String> merchantValues = getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES);
-        if (!merchantValues.isEmpty() && (normalizedMerchantTokens.isEmpty() || merchantValues.stream().noneMatch(normalizedMerchantTokens::contains))) {
+        if (!merchantValues.isEmpty() && (normalizedMerchantTokens.isEmpty() || !matchesAnyToken(merchantValues, normalizedMerchantTokens))) {
             return false;
         }
 
@@ -1255,6 +1292,13 @@ public class DecisionEngine {
         return paymentValues.stream().anyMatch(normalizedPaymentMethods::contains);
     }
 
+    private boolean matchesAnyToken(List<String> conditionTokens, Set<String> requestTokens) {
+        return conditionTokens.stream().anyMatch(conditionToken ->
+                requestTokens.contains(conditionToken)
+                        || requestTokens.stream().anyMatch(requestToken ->
+                        conditionToken.contains(requestToken) || requestToken.contains(conditionToken)));
+    }
+
     private Set<String> expandMerchantTokens(String merchantName) {
         String normalizedMerchant = normalizeValue(merchantName);
         if (normalizedMerchant.isBlank()) {
@@ -1268,8 +1312,18 @@ public class DecisionEngine {
         if (canonical != null && !canonical.isBlank()) {
             values.add(canonical);
         }
+        canonicalFromKnownMerchantAlias(normalizedMerchant).ifPresent(values::add);
+        merchantRegistry.canonicalCode(merchantName).ifPresent(values::add);
 
         return values;
+    }
+
+    private Optional<String> canonicalFromKnownMerchantAlias(String normalizedMerchant) {
+        return switch (normalizedMerchant) {
+            case "\u5168\u806F", "\u5927\u5168\u806F" -> Optional.of("PXMART");
+            case "\u58FD\u53F8\u90CE", "\u53F0\u7063\u58FD\u53F8\u90CE" -> Optional.of("SUSHIRO");
+            default -> Optional.empty();
+        };
     }
 
     private List<String> getNormalizedConditionValues(Promotion promotion, Set<String> allowedTypes) {
@@ -1313,6 +1367,43 @@ public class DecisionEngine {
             values.add("MOBILE_PAY");
         }
         return values;
+    }
+
+    private List<String> buildNoResultReasons(
+            int evaluatedPromotionCount,
+            int eligiblePromotionCount,
+            int rankedCardCount,
+            RecommendationRequest request
+    ) {
+        if (rankedCardCount > 0) {
+            return List.of();
+        }
+
+        List<String> reasons = new ArrayList<>();
+        if (evaluatedPromotionCount == 0) {
+            reasons.add("NO_ACTIVE_PROMOTIONS_FOR_DATE");
+        } else if (eligiblePromotionCount == 0) {
+            reasons.add("NO_PROMOTIONS_MATCH_SCENARIO");
+        } else {
+            reasons.add("NO_POSITIVE_REWARD_AFTER_CAPS");
+        }
+
+        RecommendationScenario scenario = request.toResolvedScenario();
+        if (scenario.getMerchantName() != null && !scenario.getMerchantName().isBlank()) {
+            reasons.add("MERCHANT_FILTER_APPLIED");
+        }
+        if (scenario.getPaymentMethod() != null && !scenario.getPaymentMethod().isBlank()) {
+            reasons.add("PAYMENT_METHOD_FILTER_APPLIED");
+        }
+        if (scenario.getChannel() != null
+                && !scenario.getChannel().isBlank()
+                && !"ALL".equals(normalizeValue(scenario.getChannel()))) {
+            reasons.add("CHANNEL_FILTER_APPLIED");
+        }
+        if (request.getResolvedCardCodes() != null && !request.getResolvedCardCodes().isEmpty()) {
+            reasons.add("CARD_FILTER_APPLIED");
+        }
+        return reasons;
     }
 
     private boolean matchesExcludedConditions(Promotion promotion, RecommendationRequest request) {

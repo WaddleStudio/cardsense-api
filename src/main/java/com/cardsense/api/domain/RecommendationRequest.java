@@ -2,7 +2,9 @@ package com.cardsense.api.domain;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,6 +27,7 @@ public class RecommendationRequest {
     private Integer amount;
 
     @JsonAlias("merchant_category")
+    @Pattern(regexp = "DINING|TRANSPORT|ONLINE|TRAVEL|OVERSEAS|SHOPPING|GROCERY|ENTERTAINMENT|OTHER")
     private String category;
 
     private String subcategory;
@@ -40,8 +43,10 @@ public class RecommendationRequest {
     @JsonAlias("transaction_date")
     private LocalDate date;
 
+    @Valid
     private RecommendationScenario scenario;
 
+    @Valid
     private RecommendationComparisonOptions comparison;
 
     @JsonAlias("benefit_plan_tiers")
