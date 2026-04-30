@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -30,6 +31,9 @@ public class CardRecommendation {
     private List<PromotionCondition> conditions;
     private List<PromotionRewardBreakdown> promotionBreakdown;
     private String applyUrl;
+    private String sourceUrl;
+    private LocalDateTime verifiedAt;
+    private BigDecimal confidence;
     private ActivePlan activePlan;
     private boolean generalRewardOnly;
     private RewardDetail rewardDetail;

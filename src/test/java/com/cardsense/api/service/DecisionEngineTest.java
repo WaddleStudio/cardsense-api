@@ -11,9 +11,11 @@ import com.cardsense.api.domain.RecommendationResponse;
 import com.cardsense.api.domain.RecommendationScenario;
 import com.cardsense.api.repository.BenefitPlanRepository;
 import com.cardsense.api.repository.PromotionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.core.io.DefaultResourceLoader;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +32,7 @@ class DecisionEngineTest {
 
     private PromotionRepository promotionRepository;
     private BenefitPlanRepository benefitPlanRepository;
+    private MerchantRegistry merchantRegistry;
     private DecisionEngine decisionEngine;
 
     @BeforeEach
@@ -40,7 +43,9 @@ class DecisionEngineTest {
         when(mockRateService.getPointValueRate(any(), any())).thenReturn(BigDecimal.ONE);
         when(mockRateService.getMileValueRate(any(), any())).thenReturn(new BigDecimal("0.40"));
         when(mockRateService.getRateSource(any(), any(), any())).thenReturn("SYSTEM_DEFAULT");
-        decisionEngine = new DecisionEngine(promotionRepository, new RewardCalculator(mockRateService), benefitPlanRepository);
+        merchantRegistry = new MerchantRegistry(new ObjectMapper(), new DefaultResourceLoader(), "classpath:merchant-registry.json");
+        merchantRegistry.load();
+        decisionEngine = new DecisionEngine(promotionRepository, new RewardCalculator(mockRateService), benefitPlanRepository, merchantRegistry);
     }
 
     @Test
@@ -220,7 +225,7 @@ class DecisionEngineTest {
                         .build())
                 .build());
 
-        assertEquals(3, response.getRecommendations().size());
+        assertEquals(3, response.getRecommendations().size(), response.getNoResultReasons().toString());
         assertEquals(
                 List.of("TAISHIN", "ESUN", "CATHAY"),
                 response.getRecommendations().stream()
@@ -248,7 +253,7 @@ class DecisionEngineTest {
                         .build())
                 .build());
 
-        assertEquals(1, response.getRecommendations().size());
+        assertEquals(1, response.getRecommendations().size(), response.getNoResultReasons().toString());
         assertEquals("promo-sushiro", response.getRecommendations().get(0).getPromotionId());
     }
 

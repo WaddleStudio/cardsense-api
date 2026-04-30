@@ -18,6 +18,7 @@ public class RecommendationResponse {
     private RecommendationScenario scenario;
     private RecommendationComparisonSummary comparison;
     private List<CardRecommendation> recommendations;
+    private List<String> noResultReasons;
     private LocalDateTime generatedAt;
     private String disclaimer;
 }

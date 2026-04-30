@@ -41,7 +41,7 @@ public class DecisionEngineBenefitPlanTest {
         when(mockRateService.getMileValueRate(any(), any())).thenReturn(new BigDecimal("0.40"));
         when(mockRateService.getRateSource(any(), any(), any())).thenReturn("SYSTEM_DEFAULT");
         rewardCalculator = new RewardCalculator(mockRateService);
-        decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator, benefitPlanRepository);
+        decisionEngine = new DecisionEngine(promotionRepository, rewardCalculator, benefitPlanRepository, Mockito.mock(MerchantRegistry.class));
     }
 
     @Test

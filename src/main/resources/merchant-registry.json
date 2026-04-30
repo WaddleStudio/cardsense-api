@@ -1,0 +1,2027 @@
+[
+    {
+        "code":  "PCHOME_24H",
+        "label":  "PChome 24h",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "PChome 24h",
+                        "PChome"
+                    ]
+    },
+    {
+        "code":  "MOMO",
+        "label":  "momo",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "momo"
+                    ]
+    },
+    {
+        "code":  "SHOPEE",
+        "label":  "蝦皮",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "蝦皮"
+                    ]
+    },
+    {
+        "code":  "YAHOO",
+        "label":  "Yahoo",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "Yahoo"
+                    ]
+    },
+    {
+        "code":  "COUPANG",
+        "label":  "Coupang",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "Coupang"
+                    ]
+    },
+    {
+        "code":  "TAOBAO",
+        "label":  "淘寶",
+        "category":  "ONLINE",
+        "subcategory":  "INTERNATIONAL_ECOMMERCE",
+        "aliases":  [
+                        "淘寶"
+                    ]
+    },
+    {
+        "code":  "TMALL",
+        "label":  "天貓",
+        "category":  "ONLINE",
+        "subcategory":  "INTERNATIONAL_ECOMMERCE",
+        "aliases":  [
+                        "天貓"
+                    ]
+    },
+    {
+        "code":  "CHATGPT",
+        "label":  "ChatGPT",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "ChatGPT"
+                    ]
+    },
+    {
+        "code":  "CLAUDE",
+        "label":  "Claude",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Claude"
+                    ]
+    },
+    {
+        "code":  "CURSOR",
+        "label":  "Cursor",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Cursor"
+                    ]
+    },
+    {
+        "code":  "GEMINI",
+        "label":  "Gemini",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Gemini"
+                    ]
+    },
+    {
+        "code":  "PERPLEXITY",
+        "label":  "Perplexity",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Perplexity"
+                    ]
+    },
+    {
+        "code":  "NOTION",
+        "label":  "Notion",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Notion"
+                    ]
+    },
+    {
+        "code":  "CANVA",
+        "label":  "Canva",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Canva"
+                    ]
+    },
+    {
+        "code":  "GAMMA",
+        "label":  "Gamma",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Gamma"
+                    ]
+    },
+    {
+        "code":  "HOTELS_COM",
+        "label":  "Hotels.com",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Hotels.com"
+                    ]
+    },
+    {
+        "code":  "AGODA",
+        "label":  "Agoda",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Agoda"
+                    ]
+    },
+    {
+        "code":  "BOOKING",
+        "label":  "Booking.com",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Booking.com",
+                        "Booking"
+                    ]
+    },
+    {
+        "code":  "KLOOK",
+        "label":  "Klook",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Klook"
+                    ]
+    },
+    {
+        "code":  "KKDAY",
+        "label":  "KKday",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "KKday"
+                    ]
+    },
+    {
+        "code":  "TRIP_COM",
+        "label":  "Trip.com",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Trip.com"
+                    ]
+    },
+    {
+        "code":  "EZTRAVEL",
+        "label":  "易遊網",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "易遊網"
+                    ]
+    },
+    {
+        "code":  "LION_TRAVEL",
+        "label":  "雄獅旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "雄獅旅遊",
+                        "雄獅"
+                    ]
+    },
+    {
+        "code":  "PXMART",
+        "label":  "全聯",
+        "category":  "GROCERY",
+        "subcategory":  "SUPERMARKET",
+        "aliases":  [
+                        "全聯"
+                    ]
+    },
+    {
+        "code":  "CARREFOUR",
+        "label":  "家樂福",
+        "category":  "GROCERY",
+        "subcategory":  "SUPERMARKET",
+        "aliases":  [
+                        "家樂福"
+                    ]
+    },
+    {
+        "code":  "LOPIA",
+        "label":  "LOPIA",
+        "category":  "GROCERY",
+        "subcategory":  "SUPERMARKET",
+        "aliases":  [
+                        "LOPIA"
+                    ]
+    },
+    {
+        "code":  "RT_MART",
+        "label":  "RT-Mart",
+        "category":  "SHOPPING",
+        "subcategory":  "WAREHOUSE",
+        "aliases":  [
+                        "RT-Mart"
+                    ]
+    },
+    {
+        "code":  "SOGO",
+        "label":  "遠東 SOGO",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "SOGO"
+                    ]
+    },
+    {
+        "code":  "SHIN_KONG_MITSUKOSHI",
+        "label":  "新光三越",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "新光三越"
+                    ]
+    },
+    {
+        "code":  "FAR_EAST_DEPARTMENT_STORE",
+        "label":  "遠東百貨",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "遠東百貨"
+                    ]
+    },
+    {
+        "code":  "BREEZE",
+        "label":  "微風",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "微風"
+                    ]
+    },
+    {
+        "code":  "TAIPEI_101",
+        "label":  "台北101",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "台北101"
+                    ]
+    },
+    {
+        "code":  "CHUNGYO",
+        "label":  "中友百貨",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "中友百貨",
+                        "中友"
+                    ]
+    },
+    {
+        "code":  "METROWALK",
+        "label":  "大江購物中心",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "大江"
+                    ]
+    },
+    {
+        "code":  "GLOBAL_MALL",
+        "label":  "環球購物中心",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "環球購物中心"
+                    ]
+    },
+    {
+        "code":  "COSMED",
+        "label":  "康是美",
+        "category":  "SHOPPING",
+        "subcategory":  "DRUGSTORE",
+        "aliases":  [
+                        "康是美"
+                    ]
+    },
+    {
+        "code":  "WATSONS",
+        "label":  "屈臣氏",
+        "category":  "SHOPPING",
+        "subcategory":  "DRUGSTORE",
+        "aliases":  [
+                        "屈臣氏"
+                    ]
+    },
+    {
+        "code":  "CPC",
+        "label":  "台灣中油",
+        "category":  "TRANSPORT",
+        "subcategory":  "GAS_STATION",
+        "aliases":  [
+                        "台灣中油"
+                    ]
+    },
+    {
+        "code":  "NATIONWIDE_GAS",
+        "label":  "全國加油",
+        "category":  "TRANSPORT",
+        "subcategory":  "GAS_STATION",
+        "aliases":  [
+                        "全國加油"
+                    ]
+    },
+    {
+        "code":  "FORMOSA_PETROCHEMICAL",
+        "label":  "台塑石油",
+        "category":  "TRANSPORT",
+        "subcategory":  "GAS_STATION",
+        "aliases":  [
+                        "台塑石油"
+                    ]
+    },
+    {
+        "code":  "TAIA",
+        "label":  "台亞",
+        "category":  "TRANSPORT",
+        "subcategory":  "GAS_STATION",
+        "aliases":  [
+                        "台亞"
+                    ]
+    },
+    {
+        "code":  "FORMOZA",
+        "label":  "福懋",
+        "category":  "TRANSPORT",
+        "subcategory":  "GAS_STATION",
+        "aliases":  [
+                        "福懋"
+                    ]
+    },
+    {
+        "code":  "UBER",
+        "label":  "Uber",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "Uber"
+                    ]
+    },
+    {
+        "code":  "GRAB",
+        "label":  "Grab",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "Grab"
+                    ]
+    },
+    {
+        "code":  "YOXI",
+        "label":  "yoxi",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "yoxi"
+                    ]
+    },
+    {
+        "code":  "GOSHARE",
+        "label":  "GoShare",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "GoShare"
+                    ]
+    },
+    {
+        "code":  "WEMO",
+        "label":  "WeMo",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "WeMo"
+                    ]
+    },
+    {
+        "code":  "CHINA_AIRLINES",
+        "label":  "中華航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "中華航空"
+                    ]
+    },
+    {
+        "code":  "EVA_AIR",
+        "label":  "長榮航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "長榮航空",
+                        "長榮"
+                    ]
+    },
+    {
+        "code":  "STARLUX",
+        "label":  "星宇航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "星宇航空",
+                        "星宇"
+                    ]
+    },
+    {
+        "code":  "CATHAY_PACIFIC",
+        "label":  "國泰航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "國泰航空"
+                    ]
+    },
+    {
+        "code":  "TRA",
+        "label":  "台鐵",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "台鐵"
+                    ]
+    },
+    {
+        "code":  "THSR",
+        "label":  "高鐵",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "高鐵"
+                    ]
+    },
+    {
+        "code":  "UBER_EATS",
+        "label":  "Uber Eats",
+        "category":  "DINING",
+        "subcategory":  "DELIVERY",
+        "aliases":  [
+                        "Uber Eats",
+                        "UberEats"
+                    ]
+    },
+    {
+        "code":  "FOODPANDA",
+        "label":  "foodpanda",
+        "category":  "DINING",
+        "subcategory":  "DELIVERY",
+        "aliases":  [
+                        "foodpanda"
+                    ]
+    },
+    {
+        "code":  "STARBUCKS",
+        "label":  "星巴克",
+        "category":  "DINING",
+        "subcategory":  "CAFE",
+        "aliases":  [
+                        "星巴克",
+                        "Starbucks"
+                    ]
+    },
+    {
+        "code":  "MCDONALD",
+        "label":  "麥當勞",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "麥當勞"
+                    ]
+    },
+    {
+        "code":  "NETFLIX",
+        "label":  "Netflix",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Netflix"
+                    ]
+    },
+    {
+        "code":  "YOUTUBE_PREMIUM",
+        "label":  "YouTube Premium",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "YouTube Premium",
+                        "YouTube"
+                    ]
+    },
+    {
+        "code":  "DISNEY_PLUS",
+        "label":  "Disney+",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Disney+",
+                        "Disney"
+                    ]
+    },
+    {
+        "code":  "SPOTIFY",
+        "label":  "Spotify",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Spotify"
+                    ]
+    },
+    {
+        "code":  "UNIQLO",
+        "label":  "UNIQLO",
+        "category":  "SHOPPING",
+        "subcategory":  "APPAREL",
+        "aliases":  [
+                        "UNIQLO"
+                    ]
+    },
+    {
+        "code":  "GU",
+        "label":  "GU",
+        "category":  "SHOPPING",
+        "subcategory":  "APPAREL",
+        "aliases":  [
+                        "GU"
+                    ]
+    },
+    {
+        "code":  "NET",
+        "label":  "NET",
+        "category":  "SHOPPING",
+        "subcategory":  "APPAREL",
+        "aliases":  [
+                        "NET"
+                    ]
+    },
+    {
+        "code":  "DECATHLON",
+        "label":  "迪卡儂",
+        "category":  "SHOPPING",
+        "subcategory":  "SPORTING_GOODS",
+        "aliases":  [
+                        "迪卡儂"
+                    ]
+    },
+    {
+        "code":  "IKEA",
+        "label":  "IKEA",
+        "category":  "SHOPPING",
+        "subcategory":  "HOME_LIVING",
+        "aliases":  [
+                        "IKEA"
+                    ]
+    },
+    {
+        "code":  "MUJI",
+        "label":  "MUJI",
+        "category":  "SHOPPING",
+        "subcategory":  "HOME_LIVING",
+        "aliases":  [
+                        "MUJI"
+                    ]
+    },
+    {
+        "code":  "U_POWER",
+        "label":  "U-POWER",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "U-POWER"
+                    ]
+    },
+    {
+        "code":  "EVOASIS",
+        "label":  "EVOASIS",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "EVOASIS"
+                    ]
+    },
+    {
+        "code":  "ICHARGING",
+        "label":  "iCharging",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "iCharging"
+                    ]
+    },
+    {
+        "code":  "AMPGO",
+        "label":  "AMPGO",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "AMPGO"
+                    ]
+    },
+    {
+        "code":  "EVALUE",
+        "label":  "EVALUE",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "EVALUE"
+                    ]
+    },
+    {
+        "code":  "TAIL",
+        "label":  "TAIL",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "TAIL"
+                    ]
+    },
+    {
+        "code":  "TESLA_SUPERCHARGER",
+        "label":  "Tesla Supercharger",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "Tesla Supercharger"
+                    ]
+    },
+    {
+        "code":  "GOGORO_BATTERY",
+        "label":  "Gogoro 換電",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "Gogoro換電",
+                        "Gogoro 換電"
+                    ]
+    },
+    {
+        "code":  "NATIONWIDE_FAST_CHARGING",
+        "label":  "全國快充",
+        "category":  "TRANSPORT",
+        "subcategory":  "EV_CHARGING",
+        "aliases":  [
+                        "全國快充"
+                    ]
+    },
+    {
+        "code":  "7_ELEVEN",
+        "label":  "7-ELEVEN",
+        "category":  "GROCERY",
+        "subcategory":  "CONVENIENCE_STORE",
+        "aliases":  [
+                        "7-ELEVEN",
+                        "7-11",
+                        "統一超商"
+                    ]
+    },
+    {
+        "code":  "FAMILYMART",
+        "label":  "全家",
+        "category":  "GROCERY",
+        "subcategory":  "CONVENIENCE_STORE",
+        "aliases":  [
+                        "全家",
+                        "全家便利商店",
+                        "FamilyMart"
+                    ]
+    },
+    {
+        "code":  "HI_LIFE",
+        "label":  "萊爾富",
+        "category":  "GROCERY",
+        "subcategory":  "CONVENIENCE_STORE",
+        "aliases":  [
+                        "萊爾富"
+                    ]
+    },
+    {
+        "code":  "OK_MART",
+        "label":  "OK超商",
+        "category":  "GROCERY",
+        "subcategory":  "CONVENIENCE_STORE",
+        "aliases":  [
+                        "OK超商",
+                        "OK"
+                    ]
+    },
+    {
+        "code":  "TSANN_KUEN",
+        "label":  "燦坤",
+        "category":  "SHOPPING",
+        "subcategory":  "ELECTRONICS",
+        "aliases":  [
+                        "燦坤"
+                    ]
+    },
+    {
+        "code":  "ELIFE",
+        "label":  "全國電子",
+        "category":  "SHOPPING",
+        "subcategory":  "ELECTRONICS",
+        "aliases":  [
+                        "全國電子"
+                    ]
+    },
+    {
+        "code":  "APPLE_STORE",
+        "label":  "Apple Store",
+        "category":  "SHOPPING",
+        "subcategory":  "ELECTRONICS",
+        "aliases":  [
+                        "Apple Store",
+                        "Apple 直營"
+                    ]
+    },
+    {
+        "code":  "MI_STORE",
+        "label":  "小米",
+        "category":  "SHOPPING",
+        "subcategory":  "ELECTRONICS",
+        "aliases":  [
+                        "小米"
+                    ]
+    },
+    {
+        "code":  "WOWPRIME",
+        "label":  "王品",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "王品",
+                        "王品集團"
+                    ]
+    },
+    {
+        "code":  "VOLTERRA_GROUP",
+        "label":  "饗賓餐旅",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "饗賓",
+                        "饗賓餐旅"
+                    ]
+    },
+    {
+        "code":  "TOFU_RESTAURANTS",
+        "label":  "豆府餐飲",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "豆府",
+                        "豆府餐飲"
+                    ]
+    },
+    {
+        "code":  "SABOTEN",
+        "label":  "勝博殿",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "勝博殿"
+                    ]
+    },
+    {
+        "code":  "COLD_STONE",
+        "label":  "Cold Stone",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "Cold Stone"
+                    ]
+    },
+    {
+        "code":  "EZTABLE",
+        "label":  "EZTABLE",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "EZTABLE"
+                    ]
+    },
+    {
+        "code":  "LALAPORT",
+        "label":  "LaLaport",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "LaLaport"
+                    ]
+    },
+    {
+        "code":  "DING_DING",
+        "label":  "丁丁藥局",
+        "category":  "SHOPPING",
+        "subcategory":  "DRUGSTORE",
+        "aliases":  [
+                        "丁丁藥局",
+                        "丁丁"
+                    ]
+    },
+    {
+        "code":  "GREAT_TREE",
+        "label":  "大樹藥局",
+        "category":  "SHOPPING",
+        "subcategory":  "DRUGSTORE",
+        "aliases":  [
+                        "大樹藥局",
+                        "大樹"
+                    ]
+    },
+    {
+        "code":  "HOLA",
+        "label":  "HOLA",
+        "category":  "SHOPPING",
+        "subcategory":  "HOME_LIVING",
+        "aliases":  [
+                        "HOLA"
+                    ]
+    },
+    {
+        "code":  "HOI",
+        "label":  "HOI",
+        "category":  "SHOPPING",
+        "subcategory":  "HOME_LIVING",
+        "aliases":  [
+                        "HOI"
+                    ]
+    },
+    {
+        "code":  "TR_PLUS",
+        "label":  "特力+",
+        "category":  "SHOPPING",
+        "subcategory":  "HOME_LIVING",
+        "aliases":  [
+                        "特力+",
+                        "TR+"
+                    ]
+    },
+    {
+        "code":  "IRENT",
+        "label":  "iRent",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "iRent"
+                    ]
+    },
+    {
+        "code":  "TAIWAN_TAXI",
+        "label":  "台灣大車隊",
+        "category":  "TRANSPORT",
+        "subcategory":  "RIDESHARE",
+        "aliases":  [
+                        "台灣大車隊"
+                    ]
+    },
+    {
+        "code":  "AIRBNB",
+        "label":  "Airbnb",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Airbnb"
+                    ]
+    },
+    {
+        "code":  "ASIAYO",
+        "label":  "AsiaYo",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "AsiaYo"
+                    ]
+    },
+    {
+        "code":  "EXPEDIA",
+        "label":  "Expedia",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_PLATFORM",
+        "aliases":  [
+                        "Expedia"
+                    ]
+    },
+    {
+        "code":  "SHANFU_TRAVEL",
+        "label":  "山富旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "山富",
+                        "山富旅遊"
+                    ]
+    },
+    {
+        "code":  "PACIFIC_TRAVEL",
+        "label":  "太平洋旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "太平洋",
+                        "太平洋旅遊"
+                    ]
+    },
+    {
+        "code":  "GALILEE_TRAVEL",
+        "label":  "加利利旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "加利利",
+                        "加利利旅遊"
+                    ]
+    },
+    {
+        "code":  "COLA_TRAVEL",
+        "label":  "可樂旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "可樂",
+                        "可樂旅遊"
+                    ]
+    },
+    {
+        "code":  "SOUTHEAST_TRAVEL",
+        "label":  "東南旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "東南",
+                        "東南旅遊"
+                    ]
+    },
+    {
+        "code":  "SUNNYDAY_TRAVEL",
+        "label":  "晴天旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "晴天",
+                        "晴天旅遊"
+                    ]
+    },
+    {
+        "code":  "HUAYOU_TRAVEL",
+        "label":  "華友旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "華友",
+                        "華友旅遊"
+                    ]
+    },
+    {
+        "code":  "WUFU_TRAVEL",
+        "label":  "五福旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "五福",
+                        "五福旅遊"
+                    ]
+    },
+    {
+        "code":  "JAPAN_AIRLINES",
+        "label":  "日本航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "日本航空",
+                        "JAL"
+                    ]
+    },
+    {
+        "code":  "SINGAPORE_AIRLINES",
+        "label":  "新加坡航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "新加坡航空"
+                    ]
+    },
+    {
+        "code":  "ANA",
+        "label":  "全日空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "全日空",
+                        "ANA"
+                    ]
+    },
+    {
+        "code":  "PEACH",
+        "label":  "樂桃航空",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "樂桃航空",
+                        "Peach"
+                    ]
+    },
+    {
+        "code":  "SCOOT",
+        "label":  "酷航",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "酷航",
+                        "Scoot"
+                    ]
+    },
+    {
+        "code":  "TIGERAIR_TAIWAN",
+        "label":  "台灣虎航",
+        "category":  "TRANSPORT",
+        "subcategory":  "AIRLINE",
+        "aliases":  [
+                        "台灣虎航"
+                    ]
+    },
+    {
+        "code":  "YOUBIKE_2_0",
+        "label":  "YouBike 2.0",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "YouBike",
+                        "YouBike 2.0"
+                    ]
+    },
+    {
+        "code":  "ICOCA",
+        "label":  "ICOCA",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "ICOCA"
+                    ]
+    },
+    {
+        "code":  "SUICA",
+        "label":  "Suica",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "Suica"
+                    ]
+    },
+    {
+        "code":  "PASMO",
+        "label":  "PASMO",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "PASMO"
+                    ]
+    },
+    {
+        "code":  "GO_TAXI_JP",
+        "label":  "日本GO Taxi App",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "日本GO Taxi App",
+                        "GO Taxi",
+                        "GO Taxi App"
+                    ]
+    },
+    {
+        "code":  "TAOYUAN_AIRPORT_MRT",
+        "label":  "桃園機場捷運",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "桃園機場捷運",
+                        "機場捷運",
+                        "桃捷"
+                    ]
+    },
+    {
+        "code":  "CHEMAJI",
+        "label":  "車麻吉",
+        "category":  "TRANSPORT",
+        "subcategory":  "PARKING",
+        "aliases":  [
+                        "車麻吉"
+                    ]
+    },
+    {
+        "code":  "UTAGGO",
+        "label":  "uTagGo",
+        "category":  "TRANSPORT",
+        "subcategory":  "PARKING",
+        "aliases":  [
+                        "uTagGo"
+                    ]
+    },
+    {
+        "code":  "APPLE_MEDIA_SERVICES",
+        "label":  "Apple Media Services",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Apple Media Services",
+                        "Apple TV+",
+                        "Apple Music"
+                    ]
+    },
+    {
+        "code":  "GOOGLE_PLAY",
+        "label":  "Google Play",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Google Play"
+                    ]
+    },
+    {
+        "code":  "MAX",
+        "label":  "Max",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "Max",
+                        "HBO Max"
+                    ]
+    },
+    {
+        "code":  "DUOLINGO",
+        "label":  "Duolingo",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Duolingo"
+                    ]
+    },
+    {
+        "code":  "SPEAK",
+        "label":  "Speak",
+        "category":  "ONLINE",
+        "subcategory":  "AI_TOOL",
+        "aliases":  [
+                        "Speak"
+                    ]
+    },
+    {
+        "code":  "CUBE_SHOP",
+        "label":  "Cube Shop",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "Cube Shop",
+                        "Cube 購物"
+                    ]
+    },
+    {
+        "code":  "MYFONE",
+        "label":  "myfone",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "myfone",
+                        "myfone購物"
+                    ]
+    },
+    {
+        "code":  "MARRIOTT",
+        "label":  "萬豪酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "萬豪",
+                        "Marriott",
+                        "萬豪酒店",
+                        "萬怡",
+                        "萬麗",
+                        "Courtyard",
+                        "Renaissance",
+                        "Moxy"
+                    ]
+    },
+    {
+        "code":  "HILTON",
+        "label":  "希爾頓",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "希爾頓",
+                        "Hilton"
+                    ]
+    },
+    {
+        "code":  "IHG",
+        "label":  "洲際酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "洲際",
+                        "IHG",
+                        "洲際酒店",
+                        "英迪格",
+                        "Indigo"
+                    ]
+    },
+    {
+        "code":  "SHANGRI_LA",
+        "label":  "香格里拉",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "香格里拉",
+                        "Shangri-La",
+                        "遠東香格里拉"
+                    ]
+    },
+    {
+        "code":  "HYATT",
+        "label":  "凱悅",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "凱悅",
+                        "Hyatt",
+                        "君悅"
+                    ]
+    },
+    {
+        "code":  "SHERATON",
+        "label":  "喜來登",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "喜來登",
+                        "Sheraton"
+                    ]
+    },
+    {
+        "code":  "REGENT",
+        "label":  "晶華酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "晶華",
+                        "Regent",
+                        "晶華酒店",
+                        "晶泉丰旅",
+                        "Silks Place"
+                    ]
+    },
+    {
+        "code":  "ROYAL_HOTEL",
+        "label":  "老爺酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "老爺",
+                        "老爺酒店"
+                    ]
+    },
+    {
+        "code":  "HUMBLE_HOUSE",
+        "label":  "寒舍集團",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "寒舍",
+                        "寒舍艾美",
+                        "寒舍艾麗",
+                        "寒居",
+                        "慕軒"
+                    ]
+    },
+    {
+        "code":  "CAESAR",
+        "label":  "凱撒飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "凱撒",
+                        "凱撒飯店"
+                    ]
+    },
+    {
+        "code":  "AMBASSADOR",
+        "label":  "國賓飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "國賓",
+                        "國賓飯店",
+                        "國賓大飯店"
+                    ]
+    },
+    {
+        "code":  "HOWARD",
+        "label":  "福華飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "福華",
+                        "福華飯店"
+                    ]
+    },
+    {
+        "code":  "FLEUR_DE_CHINE",
+        "label":  "雲品溫泉酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "雲品",
+                        "雲品溫泉"
+                    ]
+    },
+    {
+        "code":  "THE_LALU",
+        "label":  "涵碧樓",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "涵碧樓"
+                    ]
+    },
+    {
+        "code":  "HI_LAI",
+        "label":  "漢來飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "漢來",
+                        "漢來大飯店",
+                        "漢來名人坊"
+                    ]
+    },
+    {
+        "code":  "COSMOS",
+        "label":  "天成飯店集團",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "天成",
+                        "和逸",
+                        "COZZI",
+                        "天成逸旅",
+                        "瑞穗天合"
+                    ]
+    },
+    {
+        "code":  "EVERGREEN",
+        "label":  "長榮酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "長榮酒店",
+                        "長榮桂冠"
+                    ]
+    },
+    {
+        "code":  "MANDARIN_ORIENTAL",
+        "label":  "文華東方",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "文華東方",
+                        "Mandarin Oriental"
+                    ]
+    },
+    {
+        "code":  "FUSHIN",
+        "label":  "馥森/馥蘭朵",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "馥森",
+                        "馥蘭朵",
+                        "Trio"
+                    ]
+    },
+    {
+        "code":  "HOTELDAY",
+        "label":  "承億酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "承億",
+                        "承億酒店"
+                    ]
+    },
+    {
+        "code":  "H2O_HOTEL",
+        "label":  "水京棧國際酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "水京棧",
+                        "H2O Hotel"
+                    ]
+    },
+    {
+        "code":  "JR_EAST_HOTEL",
+        "label":  "JR東日本大飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "JR東日本大飯店",
+                        "JR東日本"
+                    ]
+    },
+    {
+        "code":  "SMITH_WOLLENSKY",
+        "label":  "Smith \u0026 Wollensky",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "Smith \u0026 Wollensky"
+                    ]
+    },
+    {
+        "code":  "BEITOU_DADI",
+        "label":  "北投大地酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "北投大地",
+                        "大地酒店"
+                    ]
+    },
+    {
+        "code":  "GRAND_MAYFULL",
+        "label":  "美福大飯店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "美福大飯店",
+                        "美福"
+                    ]
+    },
+    {
+        "code":  "ZHONGSHAN_CLUB",
+        "label":  "台中中山招待所",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "中山招待所"
+                    ]
+    },
+    {
+        "code":  "RAN_ONE",
+        "label":  "然一酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "然一酒店",
+                        "然一"
+                    ]
+    },
+    {
+        "code":  "BEN_TEPPANYAKI",
+        "label":  "犇鐵板燒",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "犇鐵板燒",
+                        "犇"
+                    ]
+    },
+    {
+        "code":  "VICTORIA",
+        "label":  "維多麗亞酒店",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "維多麗亞",
+                        "維多麗亞酒店"
+                    ]
+    },
+    {
+        "code":  "PROMISEDLAND",
+        "label":  "花蓮理想大地",
+        "category":  "TRAVEL",
+        "subcategory":  "HOTEL",
+        "aliases":  [
+                        "理想大地"
+                    ]
+    },
+    {
+        "code":  "EVERRICH",
+        "label":  "昇恆昌",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "昇恆昌",
+                        "昇恆昌免稅"
+                    ]
+    },
+    {
+        "code":  "MIRAMAR",
+        "label":  "美麗華",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "美麗華",
+                        "美麗華百樂園"
+                    ]
+    },
+    {
+        "code":  "Q_SQUARE",
+        "label":  "京站時尚廣場",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "京站",
+                        "京站廣場"
+                    ]
+    },
+    {
+        "code":  "MITSUI_OUTLET",
+        "label":  "三井OUTLET",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "三井OUTLET",
+                        "三井"
+                    ]
+    },
+    {
+        "code":  "DON_DON_DONKI",
+        "label":  "台灣DON DON DONKI",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "台灣DON DON DONKI",
+                        "DON DON DONKI",
+                        "DONKI",
+                        "唐吉訶德"
+                    ]
+    },
+    {
+        "code":  "UNITED_ARROWS",
+        "label":  "UNITED ARROWS",
+        "category":  "SHOPPING",
+        "subcategory":  "APPAREL",
+        "aliases":  [
+                        "UNITED ARROWS",
+                        "UNITED ARROWS LTD."
+                    ]
+    },
+    {
+        "code":  "MING_YAO",
+        "label":  "明曜百貨",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "明曜百貨",
+                        "明曜"
+                    ]
+    },
+    {
+        "code":  "SHOWTIME_PLAZA",
+        "label":  "秀泰生活",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "秀泰生活",
+                        "秀泰廣場"
+                    ]
+    },
+    {
+        "code":  "MEGA_CITY_TAIPEI",
+        "label":  "統一時代百貨",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "統一時代百貨",
+                        "統一時代",
+                        "夢時代"
+                    ]
+    },
+    {
+        "code":  "HANSHIN",
+        "label":  "漢神百貨",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "漢神百貨",
+                        "漢神巨蛋"
+                    ]
+    },
+    {
+        "code":  "GLORIA_OUTLETS",
+        "label":  "華泰名品城",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "華泰名品城"
+                    ]
+    },
+    {
+        "code":  "TONLIN_FORESQUARE",
+        "label":  "統領廣場",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "統領廣場"
+                    ]
+    },
+    {
+        "code":  "FAR_EAST_GARDEN_CITY",
+        "label":  "遠東GARDEN CITY大巨蛋",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "遠東GARDEN_CITY",
+                        "GARDEN CITY",
+                        "大巨蛋"
+                    ]
+    },
+    {
+        "code":  "ESLITE",
+        "label":  "誠品",
+        "category":  "SHOPPING",
+        "subcategory":  "DEPARTMENT",
+        "aliases":  [
+                        "誠品",
+                        "誠品書店",
+                        "誠品生活",
+                        "誠品線上"
+                    ]
+    },
+    {
+        "code":  "KANPAI",
+        "label":  "乾杯燒肉",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "乾杯燒肉",
+                        "乾杯"
+                    ]
+    },
+    {
+        "code":  "THAI_TOWN",
+        "label":  "瓦城料理",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "瓦城料理",
+                        "瓦城"
+                    ]
+    },
+    {
+        "code":  "GENKI_SUSHI",
+        "label":  "爭鮮餐飲",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "爭鮮餐飲",
+                        "爭鮮"
+                    ]
+    },
+    {
+        "code":  "SUSHIRO",
+        "label":  "台灣壽司郎",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "台灣壽司郎",
+                        "壽司郎",
+                        "Sushiro"
+                    ]
+    },
+    {
+        "code":  "DING_WANG",
+        "label":  "鼎王餐飲",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "鼎王餐飲",
+                        "鼎王"
+                    ]
+    },
+    {
+        "code":  "TSAI_MENG",
+        "label":  "采盟旅遊",
+        "category":  "TRAVEL",
+        "subcategory":  "TRAVEL_AGENCY",
+        "aliases":  [
+                        "采盟",
+                        "采盟旅遊"
+                    ]
+    },
+    {
+        "code":  "POYA",
+        "label":  "寶雅",
+        "category":  "SHOPPING",
+        "subcategory":  "DRUGSTORE",
+        "aliases":  [
+                        "寶雅",
+                        "POYA"
+                    ]
+    },
+    {
+        "code":  "COSTCO",
+        "label":  "好市多",
+        "category":  "GROCERY",
+        "subcategory":  "WAREHOUSE",
+        "aliases":  [
+                        "好市多",
+                        "Costco"
+                    ]
+    },
+    {
+        "code":  "LOUISA",
+        "label":  "路易莎",
+        "category":  "DINING",
+        "subcategory":  "CAFE",
+        "aliases":  [
+                        "路易莎",
+                        "Louisa",
+                        "路易莎咖啡"
+                    ]
+    },
+    {
+        "code":  "C85",
+        "label":  "85度C",
+        "category":  "DINING",
+        "subcategory":  "CAFE",
+        "aliases":  [
+                        "85度C",
+                        "85°C"
+                    ]
+    },
+    {
+        "code":  "KFC",
+        "label":  "肯德基",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "肯德基",
+                        "KFC"
+                    ]
+    },
+    {
+        "code":  "MOS_BURGER",
+        "label":  "摩斯漢堡",
+        "category":  "DINING",
+        "subcategory":  "RESTAURANT",
+        "aliases":  [
+                        "摩斯漢堡",
+                        "摩斯"
+                    ]
+    },
+    {
+        "code":  "TPEMRT",
+        "label":  "台北捷運",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "台北捷運",
+                        "北捷",
+                        "MRT"
+                    ]
+    },
+    {
+        "code":  "KRTCO",
+        "label":  "高雄捷運",
+        "category":  "TRANSPORT",
+        "subcategory":  "PUBLIC_TRANSIT",
+        "aliases":  [
+                        "高雄捷運",
+                        "高捷"
+                    ]
+    },
+    {
+        "code":  "LINE_PAY",
+        "label":  "LINE Pay",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "LINE Pay"
+                    ]
+    },
+    {
+        "code":  "APPLE_PAY",
+        "label":  "Apple Pay",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "Apple Pay"
+                    ]
+    },
+    {
+        "code":  "GOOGLE_PAY",
+        "label":  "Google Pay",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "Google Pay"
+                    ]
+    },
+    {
+        "code":  "SAMSUNG_PAY",
+        "label":  "Samsung Pay",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "Samsung Pay"
+                    ]
+    },
+    {
+        "code":  "JKOPAY",
+        "label":  "街口支付",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "街口",
+                        "街口支付",
+                        "JKOPay"
+                    ]
+    },
+    {
+        "code":  "ESUN_WALLET",
+        "label":  "玉山 Wallet",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "玉山 Wallet",
+                        "玉山WALLET電子支付"
+                    ]
+    },
+    {
+        "code":  "PX_PAY",
+        "label":  "全支付",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "全支付",
+                        "PX Pay"
+                    ]
+    },
+    {
+        "code":  "EASY_WALLET",
+        "label":  "悠遊付",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "悠遊付"
+                    ]
+    },
+    {
+        "code":  "ICASH_PAY",
+        "label":  "icash Pay",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "icash Pay"
+                    ]
+    },
+    {
+        "code":  "IPASS_MONEY",
+        "label":  "iPASS MONEY",
+        "category":  "ONLINE",
+        "subcategory":  "MOBILE_PAY",
+        "aliases":  [
+                        "iPASS MONEY"
+                    ]
+    },
+    {
+        "code":  "RAKUTEN",
+        "label":  "樂天市場",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "樂天",
+                        "樂天市場",
+                        "Rakuten"
+                    ]
+    },
+    {
+        "code":  "BOOKS_COM_TW",
+        "label":  "博客來",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "博客來"
+                    ]
+    },
+    {
+        "code":  "ETMALL",
+        "label":  "東森購物",
+        "category":  "ONLINE",
+        "subcategory":  "ECOMMERCE",
+        "aliases":  [
+                        "東森購物",
+                        "ETMall"
+                    ]
+    },
+    {
+        "code":  "AMAZON",
+        "label":  "Amazon",
+        "category":  "ONLINE",
+        "subcategory":  "INTERNATIONAL_ECOMMERCE",
+        "aliases":  [
+                        "Amazon"
+                    ]
+    },
+    {
+        "code":  "KKBOX",
+        "label":  "KKBOX",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "STREAMING",
+        "aliases":  [
+                        "KKBOX"
+                    ]
+    },
+    {
+        "code":  "VIESHOW",
+        "label":  "威秀影城",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "MOVIE",
+        "aliases":  [
+                        "威秀",
+                        "威秀影城",
+                        "VieShow"
+                    ]
+    },
+    {
+        "code":  "AMBASSADOR_THEATRES",
+        "label":  "國賓影城",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "MOVIE",
+        "aliases":  [
+                        "國賓",
+                        "國賓影城"
+                    ]
+    },
+    {
+        "code":  "HOLIDAY_KTV",
+        "label":  "好樂迪",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "VENUE",
+        "aliases":  [
+                        "好樂迪",
+                        "Holiday KTV"
+                    ]
+    },
+    {
+        "code":  "CASHBOX",
+        "label":  "錢櫃",
+        "category":  "ENTERTAINMENT",
+        "subcategory":  "VENUE",
+        "aliases":  [
+                        "錢櫃",
+                        "Cashbox"
+                    ]
+    },
+    {
+        "code":  "CAMA",
+        "label":  "cama cafe",
+        "category":  "DINING",
+        "subcategory":  "CAFE",
+        "aliases":  [
+                        "cama",
+                        "cama cafe"
+                    ]
+    },
+    {
+        "code":  "SEVEN_ELEVEN",
+        "label":  "7-ELEVEN",
+        "category":  "GROCERY",
+        "subcategory":  "CONVENIENCE_STORE",
+        "aliases":  [
+                        "7-ELEVEN",
+                        "7-11",
+                        "統一超商"
+                    ]
+    }
+]

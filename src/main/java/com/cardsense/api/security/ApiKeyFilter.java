@@ -54,9 +54,16 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     @Value("${cardsense.auth.enabled:false}")
     private boolean authEnabled;
 
+    @Value("${cardsense.public-recommendations.rate-limit-per-minute:60}")
+    private int publicRecommendationLimitPerMinute;
+
+    @Value("${cardsense.public-recommendations.max-body-bytes:16384}")
+    private long publicRecommendationMaxBodyBytes;
+
     // Simple in-memory caches (sufficient for single-instance Railway)
     private final ConcurrentHashMap<String, CachedClient> clientCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CachedUsage> usageCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> publicRecommendationCache = new ConcurrentHashMap<>();
 
     public ApiKeyFilter(ClientRepository clientRepository, ObjectMapper objectMapper) {
         this.clientRepository = clientRepository;
@@ -67,6 +74,19 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+
+        if (isPublicRecommendationPost(request)) {
+            if (request.getContentLengthLong() > publicRecommendationMaxBodyBytes) {
+                sendError(response, 413, "REQUEST_TOO_LARGE",
+                    "Recommendation request body is too large.");
+                return;
+            }
+            if (!allowPublicRecommendation(request)) {
+                sendError(response, 429, "PUBLIC_RATE_LIMIT_EXCEEDED",
+                    "Too many recommendation requests. Please wait a minute and try again.");
+                return;
+            }
+        }
 
         // Auth disabled → pass through (existing behavior)
         if (!authEnabled) {
@@ -154,6 +174,26 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                 || uri.startsWith("/v1/cards")
                 || uri.startsWith("/v1/recommend")
                 || uri.startsWith("/webhooks/");
+    }
+
+    private boolean isPublicRecommendationPost(HttpServletRequest request) {
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && "/v1/recommendations/card".equals(request.getRequestURI());
+    }
+
+    private boolean allowPublicRecommendation(HttpServletRequest request) {
+        if (publicRecommendationLimitPerMinute <= 0) {
+            return true;
+        }
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        String clientIp = forwardedFor == null || forwardedFor.isBlank()
+                ? request.getRemoteAddr()
+                : forwardedFor.split(",", 2)[0].trim();
+        long minute = System.currentTimeMillis() / 60_000;
+        String key = "public-rec:" + clientIp + ":" + minute;
+        int count = publicRecommendationCache.merge(key, 1, Integer::sum);
+        publicRecommendationCache.keySet().removeIf(existingKey -> !existingKey.endsWith(":" + minute));
+        return count <= publicRecommendationLimitPerMinute;
     }
 
     // ---- Track usage on public endpoints (optional, for analytics) ----

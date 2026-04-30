@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -32,7 +34,8 @@ public class SupabasePromotionRepository implements PromotionRepository {
             SELECT promo_id, promo_version_id, title, card_code, card_name, card_status, annual_fee, apply_url,
                    bank_code, bank_name, category, subcategory, channel, valid_from, valid_until, min_amount,
                    cashback_type, cashback_value, max_cashback, frequency_limit, requires_registration,
-                   recommendation_scope, eligibility_type, plan_id, conditions_json, excluded_conditions_json, status, raw_payload_json
+                   recommendation_scope, eligibility_type, plan_id, conditions_json, excluded_conditions_json,
+                   source_url, extracted_at, confidence, status, raw_payload_json
             FROM promotion_current
             """;
 
@@ -105,6 +108,9 @@ public class SupabasePromotionRepository implements PromotionRepository {
                     .stackability(parseStackability(rs.getString("raw_payload_json")))
                     .conditions(parseConditions(rs.getString("conditions_json")))
                     .excludedConditions(parseConditions(rs.getString("excluded_conditions_json")))
+                    .sourceUrl(rs.getString("source_url"))
+                    .extractedAt(parseDateTime(rs.getString("extracted_at")))
+                    .confidence(parseDecimal(rs.getString("confidence")))
                     .status(rs.getString("status"))
                     .build();
         } catch (Exception exception) {
@@ -133,6 +139,16 @@ public class SupabasePromotionRepository implements PromotionRepository {
 
     private LocalDate parseDate(String value) {
         return value == null || value.isBlank() ? null : LocalDate.parse(value.length() > 10 ? value.substring(0, 10) : value);
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.replace(" ", "T");
+        return normalized.endsWith("Z") || normalized.matches(".*[+-]\\d\\d:\\d\\d$")
+                ? OffsetDateTime.parse(normalized).toLocalDateTime()
+                : LocalDateTime.parse(normalized);
     }
 
     private BigDecimal parseDecimal(String value) {
