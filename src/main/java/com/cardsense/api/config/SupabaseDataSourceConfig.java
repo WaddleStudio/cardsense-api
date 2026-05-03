@@ -37,6 +37,7 @@ public class SupabaseDataSourceConfig {
         config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);
         config.setConnectionTimeout(5000);
+        config.setInitializationFailTimeout(0);
         config.setPoolName("supabase-pool");
         // Supabase pooler / PgBouncer transaction pooling is incompatible with
         // PostgreSQL JDBC server-side prepared statements. Disable them to avoid

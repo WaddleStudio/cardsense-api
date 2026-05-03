@@ -91,9 +91,9 @@ class CathaySqliteApiIntegrationTest {
         assertEquals(HttpStatus.OK, allCardsResponse.getStatusCode());
         assertEquals(2, allCardsResponse.getBody().size());
         assertEquals(2, activeCardsResponse.getBody().size());
-        assertEquals(2, catalogCardsResponse.getBody().size());
+        assertEquals(1, catalogCardsResponse.getBody().size());
         assertEquals(1, recommendableCardsResponse.getBody().size());
-        assertEquals(List.of("CATHAY_CUBE", "CATHAY_FORMOSA"), catalogCardsResponse.getBody().stream().map(CardSummary::getCardCode).toList());
+        assertEquals(List.of("CATHAY_CUBE"), catalogCardsResponse.getBody().stream().map(CardSummary::getCardCode).toList());
         assertEquals(List.of("CATHAY_FORMOSA"), recommendableCardsResponse.getBody().stream().map(CardSummary::getCardCode).toList());
 
         RecommendationRequest request = RecommendationRequest.builder()
@@ -149,6 +149,7 @@ class CathaySqliteApiIntegrationTest {
                             annual_fee INTEGER,
                             apply_url TEXT,
                             category TEXT NOT NULL,
+                            subcategory TEXT NOT NULL DEFAULT 'GENERAL',
                             channel TEXT,
                             cashback_type TEXT NOT NULL,
                             cashback_value NUMERIC NOT NULL,
@@ -157,6 +158,8 @@ class CathaySqliteApiIntegrationTest {
                             frequency_limit TEXT,
                             requires_registration INTEGER NOT NULL DEFAULT 0,
                             recommendation_scope TEXT NOT NULL DEFAULT 'RECOMMENDABLE',
+                            eligibility_type TEXT NOT NULL DEFAULT 'GENERAL',
+                            plan_id TEXT,
                             valid_from TEXT NOT NULL,
                             valid_until TEXT NOT NULL,
                             conditions_json TEXT NOT NULL,
