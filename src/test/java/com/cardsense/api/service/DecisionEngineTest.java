@@ -627,6 +627,156 @@ class DecisionEngineTest {
                 .build();
     }
 
+    @Test
+    @org.junit.jupiter.api.DisplayName("momo online shopping — engine handles SHOPPING/ONLINE without throwing")
+    void momo_online_shopping() {
+        Promotion promo = buildPromotion("promo-momo", "ver-momo", "CTBC_CASH_BACK", BigDecimal.valueOf(3.0), 300, LocalDate.of(2026, 12, 31));
+        promo.setCategory("SHOPPING");
+        promo.setChannel("ONLINE");
+        promo.setConditions(List.of(condition("VENUE", "MOMO", "momo購物網")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(2000).category("SHOPPING").channel("ONLINE").merchantName("momo購物網")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Shopee online shopping — engine handles SHOPPING/ONLINE without throwing")
+    void shopee_online_shopping() {
+        Promotion promo = buildPromotion("promo-shopee", "ver-shopee", "CTBC_CASH_BACK", BigDecimal.valueOf(2.5), 250, LocalDate.of(2026, 12, 31));
+        promo.setCategory("SHOPPING");
+        promo.setChannel("ONLINE");
+        promo.setConditions(List.of(condition("VENUE", "SHOPEE", "蝦皮購物")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1500).category("SHOPPING").channel("ONLINE").merchantName("蝦皮購物")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Agoda travel booking — engine handles TRAVEL/ONLINE without throwing")
+    void agoda_travel_booking() {
+        Promotion promo = buildPromotion("promo-agoda", "ver-agoda", "CATHAY_WORLD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 12, 31));
+        promo.setCategory("TRAVEL");
+        promo.setChannel("ONLINE");
+        promo.setConditions(List.of(condition("VENUE", "AGODA", "Agoda")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(5000).category("TRAVEL").channel("ONLINE").merchantName("Agoda")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Uber Eats food delivery — engine handles DINING/ONLINE/APP without throwing")
+    void uber_eats_food_delivery() {
+        Promotion promo = buildPromotion("promo-ubereats", "ver-ubereats", "ESUN_UNICARD", BigDecimal.valueOf(4.0), 400, LocalDate.of(2026, 12, 31));
+        promo.setCategory("DINING");
+        promo.setChannel("ONLINE");
+        promo.setConditions(List.of(condition("VENUE", "UBER_EATS", "Uber Eats")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(300).category("DINING").channel("ONLINE").paymentMethod("APP").merchantName("Uber Eats")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Apple Pay offline — engine handles PAYMENT condition APPLE_PAY without throwing")
+    void apple_pay_offline() {
+        Promotion promo = buildPromotion("promo-applepay", "ver-applepay", "FUBON_DIGITAL", BigDecimal.valueOf(2.0), 200, LocalDate.of(2026, 12, 31));
+        promo.setCategory("GENERAL");
+        promo.setChannel("OFFLINE");
+        promo.setConditions(List.of(condition("PAYMENT", "APPLE_PAY", "Apple Pay")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(500).category("GENERAL").channel("OFFLINE").paymentMethod("APPLE_PAY")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Costco warehouse shopping — engine handles SHOPPING/OFFLINE/COSTCO without throwing")
+    void costco_warehouse() {
+        Promotion promo = buildPromotion("promo-costco", "ver-costco", "CATHAY_COSTCO", BigDecimal.valueOf(3.5), 350, LocalDate.of(2026, 12, 31));
+        promo.setCategory("SHOPPING");
+        promo.setChannel("OFFLINE");
+        promo.setConditions(List.of(condition("VENUE", "COSTCO", "好市多")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(3000).category("SHOPPING").channel("OFFLINE").merchantName("好市多")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Insurance payment — engine handles INSURANCE category without throwing")
+    void insurance_payment() {
+        Promotion promo = buildPromotion("promo-insurance", "ver-insurance", "FUBON_INFINITE", BigDecimal.valueOf(1.0), 100, LocalDate.of(2026, 12, 31));
+        promo.setCategory("INSURANCE");
+        promo.setChannel("ONLINE");
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(10000).category("INSURANCE").channel("ONLINE")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("Overseas Japan spend — engine handles OVERSEAS category without throwing")
+    void overseas_japan_spend() {
+        Promotion promo = buildPromotion("promo-overseas", "ver-overseas", "CATHAY_WORLD", BigDecimal.valueOf(2.8), 280, LocalDate.of(2026, 12, 31));
+        promo.setCategory("OVERSEAS");
+        promo.setChannel("OFFLINE");
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(8000).category("OVERSEAS").channel("OFFLINE").merchantName("日本消費")
+                        .date(LocalDate.of(2026, 6, 1)).build())
+                .build());
+
+        assertNotNull(response);
+        assertNotNull(response.getRecommendations());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, BigDecimal cashbackValue, Integer maxCashback, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)
