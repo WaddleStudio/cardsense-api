@@ -46,6 +46,16 @@ public class DecisionEngine {
     private static final Set<String> PAYMENT_CONDITION_TYPES = Set.of(
             "PAYMENT"
     );
+    private static final Map<String, String> PAYMENT_METHOD_ALIASES = Map.ofEntries(
+            Map.entry("LINE PAY", "LINE_PAY"),
+            Map.entry("APPLE PAY", "APPLE_PAY"),
+            Map.entry("GOOGLE PAY", "GOOGLE_PAY"),
+            Map.entry("SAMSUNG PAY", "SAMSUNG_PAY"),
+            Map.entry("PX PAY", "PX_PAY"),
+            Map.entry("ICASH PAY", "ICASH_PAY"),
+            Map.entry("IPASS MONEY", "IPASS_MONEY"),
+            Map.entry("TAISHIN PAY", "TAISHIN_PAY")
+    );
     private static final Map<String, String> HIGH_FREQUENCY_MERCHANT_ALIASES = Map.ofEntries(
             Map.entry("全聯", "PXMART"),
             Map.entry("全聯福利中心", "PXMART"),
@@ -195,8 +205,10 @@ public class DecisionEngine {
         }
 
         boolean merchantMatchesVenue = hasMerchantMatchingVenueCondition(promotion, request);
+        boolean paymentMatchesPlatform = !normalizeValue(request.getResolvedPaymentMethod()).isBlank()
+                && hasMatchingPaymentCondition(promotion, normalizeValue(request.getResolvedPaymentMethod()));
 
-        if (!merchantMatchesVenue) {
+        if (!merchantMatchesVenue && !paymentMatchesPlatform) {
             if (promotion.getCategory() != null && !normalizeValue(promotion.getCategory()).equals(normalizeValue(category))) {
                 return false;
             }
@@ -722,12 +734,20 @@ public class DecisionEngine {
         String normalizedPaymentMethod = normalizeValue(request.getResolvedPaymentMethod());
         String requestSubcategory = normalizeSubcategoryForMatching(request.getResolvedSubcategory());
         boolean hasMerchantOrPaymentConstraint = !normalizedMerchant.isBlank() || !normalizedPaymentMethod.isBlank();
+        boolean paymentMatches = !normalizedPaymentMethod.isBlank() && hasMatchingPaymentCondition(promotion, normalizedPaymentMethod);
+        boolean hasMerchantConditions = !getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES).isEmpty();
 
-        if (!normalizedMerchant.isBlank() && !hasMatchingMerchantCondition(promotion, request.getResolvedMerchantName())) {
+        if (!normalizedMerchant.isBlank()
+                && hasMerchantConditions
+                && !hasMatchingMerchantCondition(promotion, request.getResolvedMerchantName())) {
             return false;
         }
 
-        if (!normalizedPaymentMethod.isBlank() && !hasMatchingPaymentCondition(promotion, normalizedPaymentMethod, normalizedMerchant)) {
+        if (!normalizedMerchant.isBlank() && !hasMerchantConditions && !paymentMatches) {
+            return false;
+        }
+
+        if (!normalizedPaymentMethod.isBlank() && !paymentMatches) {
             return false;
         }
 
@@ -747,11 +767,8 @@ public class DecisionEngine {
         return matchesAnyToken(getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES), merchantTokens);
     }
 
-    private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod, String normalizedMerchant) {
+    private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod) {
         Set<String> normalizedPaymentMethods = expandPaymentMethods(normalizedPaymentMethod);
-        if (!normalizedMerchant.isBlank()) {
-            normalizedPaymentMethods.add(normalizedMerchant);
-        }
         if (normalizedPaymentMethods.isEmpty()) {
             return false;
         }
@@ -1284,7 +1301,6 @@ public class DecisionEngine {
         }
 
         Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
-        normalizedPaymentMethods.addAll(normalizedMerchantTokens);
         if (normalizedPaymentMethods.isEmpty()) {
             return false;
         }
@@ -1363,7 +1379,15 @@ public class DecisionEngine {
 
         Set<String> values = new HashSet<>();
         values.add(normalizedPaymentMethod);
+        values.add(normalizedPaymentMethod.replaceAll("\\s+", "_"));
+        String canonical = PAYMENT_METHOD_ALIASES.get(normalizedPaymentMethod);
+        if (canonical != null && !canonical.isBlank()) {
+            values.add(canonical);
+        }
         if (MOBILE_PAY_PLATFORM_VALUES.contains(normalizedPaymentMethod)) {
+            values.add("MOBILE_PAY");
+        }
+        if (values.stream().anyMatch(MOBILE_PAY_PLATFORM_VALUES::contains)) {
             values.add("MOBILE_PAY");
         }
         return values;
@@ -1414,6 +1438,8 @@ public class DecisionEngine {
 
         String normalizedCategory = normalizeValue(request.getResolvedCategory());
         String normalizedLocation = normalizeValue(request.getResolvedLocation());
+        Set<String> normalizedMerchantTokens = expandMerchantTokens(request.getResolvedMerchantName());
+        Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
 
         for (PromotionCondition excludedCondition : excludedConditions) {
             String normalizedType = normalizeValue(excludedCondition.getType());
@@ -1424,6 +1450,18 @@ public class DecisionEngine {
                 }
             } else if ("LOCATION_EXCLUDE".equals(normalizedType)) {
                 if (!normalizedLocation.isBlank() && normalizedLocation.contains(normalizedValue)) {
+                    return true;
+                }
+            } else if ("PAYMENT".equals(normalizedType)) {
+                if (normalizedPaymentMethods.contains(normalizedValue)) {
+                    return true;
+                }
+                if ("MOBILE_PAY".equals(normalizedValue)
+                        && normalizedPaymentMethods.stream().anyMatch(MOBILE_PAY_PLATFORM_VALUES::contains)) {
+                    return true;
+                }
+            } else if ("VENUE".equals(normalizedType)) {
+                if (normalizedMerchantTokens.contains(normalizedValue)) {
                     return true;
                 }
             }

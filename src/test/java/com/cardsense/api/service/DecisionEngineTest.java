@@ -777,6 +777,164 @@ class DecisionEngineTest {
         assertNotNull(response.getRecommendations());
     }
 
+    @Test
+    void promotionWithPaymentExclusionIsFilteredOutWhenUserPaysWithExcludedPayment() {
+        Promotion promo = buildPromotion("promo-px-line", "ver-px-line", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setCategory("GROCERY");
+        promo.setSubcategory("SUPERMARKET");
+        promo.setConditions(List.of(condition("PAYMENT", "LINE_PAY", "LINE Pay")));
+        promo.setExcludedConditions(List.of(condition("PAYMENT", "LINE_PAY", "LINE Pay")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .subcategory("SUPERMARKET")
+                        .merchantName("全聯")
+                        .paymentMethod("LINE Pay")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty(),
+                "Expected no recommendations when payment exclusion matches; got: "
+                        + response.getRecommendations());
+    }
+
+    @Test
+    void promotionWithVenueExclusionIsFilteredOutWhenMerchantMatchesExclusion() {
+        Promotion promo = buildPromotion("promo-momo-excluded", "ver-momo-excluded", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setCategory("ONLINE");
+        promo.setSubcategory("ECOMMERCE");
+        promo.setConditions(List.of(condition("VENUE", "MOMO", "momo")));
+        promo.setExcludedConditions(List.of(condition("VENUE", "MOMO", "momo")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("ONLINE")
+                        .subcategory("ECOMMERCE")
+                        .merchantName("MOMO")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty(),
+                "Expected no recommendations when venue exclusion matches; got: "
+                        + response.getRecommendations());
+    }
+
+    @Test
+    void mobilePayAggregateExclusionMatchesAnySpecificMobilePayment() {
+        Promotion promo = buildPromotion("promo-mobile-pay-excluded", "ver-mobile-pay-excluded", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setCategory("GROCERY");
+        promo.setSubcategory("SUPERMARKET");
+        promo.setConditions(List.of(condition("PAYMENT", "MOBILE_PAY", "行動支付")));
+        promo.setExcludedConditions(List.of(condition("PAYMENT", "MOBILE_PAY", "行動支付")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .subcategory("SUPERMARKET")
+                        .merchantName("全聯")
+                        .paymentMethod("街口支付")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty(),
+                "Expected no recommendations when MOBILE_PAY aggregate exclusion matches a specific mobile payment; got: "
+                        + response.getRecommendations());
+    }
+
+    @Test
+    void merchantNameInputDoesNotSatisfyPaymentRequirement() {
+        Promotion promo = buildPromotion("promo-line-pay", "ver-line-pay", "ESUN_UNICARD", BigDecimal.valueOf(5.0), 500, LocalDate.of(2026, 6, 30));
+        promo.setCategory("GROCERY");
+        promo.setConditions(List.of(
+                condition("VENUE", "LINE_PAY", "LINE Pay"),
+                condition("PAYMENT", "LINE_PAY", "LINE Pay")));
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(promo));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .merchantName("LINE Pay")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty(),
+                "LINE Pay in merchant field must not satisfy a PAYMENT condition; got: "
+                        + response.getRecommendations());
+    }
+
+    @Test
+    void unicardReclassifyRulePxmartWithLinePayExcludesSupermarketCluster() {
+        Promotion supermarketCluster = buildPromotion("promo-unicard-supermarket", "ver-unicard-supermarket", "ESUN_UNICARD", BigDecimal.valueOf(3.0), 1000, LocalDate.of(2026, 6, 30));
+        supermarketCluster.setCategory("GROCERY");
+        supermarketCluster.setSubcategory("SUPERMARKET");
+        supermarketCluster.setConditions(List.of(condition("VENUE", "PXMART", "PX Mart")));
+        supermarketCluster.setExcludedConditions(List.of(condition("PAYMENT", "MOBILE_PAY", "Mobile Pay")));
+
+        Promotion mobilePayCluster = buildPromotion("promo-unicard-mobile", "ver-unicard-mobile", "ESUN_UNICARD", BigDecimal.valueOf(3.0), 1000, LocalDate.of(2026, 6, 30));
+        mobilePayCluster.setCategory("ONLINE");
+        mobilePayCluster.setSubcategory("MOBILE_PAY");
+        mobilePayCluster.setConditions(List.of(condition("PAYMENT", "MOBILE_PAY", "Mobile Pay")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(supermarketCluster, mobilePayCluster));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .merchantName("PX Mart")
+                        .paymentMethod("LINE Pay")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .cardCodes(List.of("ESUN_UNICARD"))
+                .build());
+
+        assertEquals(1, response.getRecommendations().size(), "noResultReasons=" + response.getNoResultReasons());
+        assertEquals("MOBILE_PAY", response.getRecommendations().get(0).getSubcategory());
+        assertEquals("promo-unicard-mobile", response.getRecommendations().get(0).getPromotionId());
+    }
+
+    @Test
+    void fubonDigitalLifeOnlineRewardExcludesPhysicalMerchants() {
+        Promotion digitalLifeOnline = buildPromotion("promo-digitallife-online", "ver-digitallife-online", "FUBON_DIGITALLIFE", BigDecimal.valueOf(2.0), 500, LocalDate.of(2026, 6, 30));
+        digitalLifeOnline.setCategory("ONLINE");
+        digitalLifeOnline.setSubcategory("GENERAL");
+        digitalLifeOnline.setChannel("ONLINE");
+        digitalLifeOnline.setConditions(List.of());
+        digitalLifeOnline.setExcludedConditions(List.of(
+                condition("CATEGORY_EXCLUDE", "GROCERY", "physical grocery"),
+                condition("CATEGORY_EXCLUDE", "DINING", "physical dining")));
+
+        when(promotionRepository.findActivePromotions(any())).thenReturn(List.of(digitalLifeOnline));
+
+        RecommendationResponse response = decisionEngine.recommend(RecommendationRequest.builder()
+                .scenario(RecommendationScenario.builder()
+                        .amount(1000)
+                        .category("GROCERY")
+                        .merchantName("7-ELEVEN")
+                        .paymentMethod("Apple Pay")
+                        .channel("ONLINE")
+                        .date(LocalDate.of(2026, 4, 5))
+                        .build())
+                .cardCodes(List.of("FUBON_DIGITALLIFE"))
+                .build());
+
+        assertTrue(response.getRecommendations().isEmpty(),
+                "Expected physical category exclusion to block digital-life ONLINE promo; got: "
+                        + response.getRecommendations());
+    }
+
     private Promotion buildPromotion(String promoId, String promoVersionId, String cardCode, BigDecimal cashbackValue, Integer maxCashback, LocalDate validUntil) {
         return Promotion.builder()
                 .promoId(promoId)
