@@ -727,7 +727,7 @@ public class DecisionEngine {
             return false;
         }
 
-        if (!normalizedPaymentMethod.isBlank() && !hasMatchingPaymentCondition(promotion, normalizedPaymentMethod, normalizedMerchant)) {
+        if (!normalizedPaymentMethod.isBlank() && !hasMatchingPaymentCondition(promotion, normalizedPaymentMethod)) {
             return false;
         }
 
@@ -747,11 +747,8 @@ public class DecisionEngine {
         return matchesAnyToken(getNormalizedConditionTokens(promotion, MERCHANT_CONDITION_TYPES), merchantTokens);
     }
 
-    private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod, String normalizedMerchant) {
+    private boolean hasMatchingPaymentCondition(Promotion promotion, String normalizedPaymentMethod) {
         Set<String> normalizedPaymentMethods = expandPaymentMethods(normalizedPaymentMethod);
-        if (!normalizedMerchant.isBlank()) {
-            normalizedPaymentMethods.add(normalizedMerchant);
-        }
         if (normalizedPaymentMethods.isEmpty()) {
             return false;
         }
@@ -1284,7 +1281,6 @@ public class DecisionEngine {
         }
 
         Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
-        normalizedPaymentMethods.addAll(normalizedMerchantTokens);
         if (normalizedPaymentMethods.isEmpty()) {
             return false;
         }
@@ -1414,6 +1410,8 @@ public class DecisionEngine {
 
         String normalizedCategory = normalizeValue(request.getResolvedCategory());
         String normalizedLocation = normalizeValue(request.getResolvedLocation());
+        Set<String> normalizedMerchantTokens = expandMerchantTokens(request.getResolvedMerchantName());
+        Set<String> normalizedPaymentMethods = expandPaymentMethods(request.getResolvedPaymentMethod());
 
         for (PromotionCondition excludedCondition : excludedConditions) {
             String normalizedType = normalizeValue(excludedCondition.getType());
@@ -1424,6 +1422,18 @@ public class DecisionEngine {
                 }
             } else if ("LOCATION_EXCLUDE".equals(normalizedType)) {
                 if (!normalizedLocation.isBlank() && normalizedLocation.contains(normalizedValue)) {
+                    return true;
+                }
+            } else if ("PAYMENT".equals(normalizedType)) {
+                if (normalizedPaymentMethods.contains(normalizedValue)) {
+                    return true;
+                }
+                if ("MOBILE_PAY".equals(normalizedValue)
+                        && normalizedPaymentMethods.stream().anyMatch(MOBILE_PAY_PLATFORM_VALUES::contains)) {
+                    return true;
+                }
+            } else if ("VENUE".equals(normalizedType)) {
+                if (normalizedMerchantTokens.contains(normalizedValue)) {
                     return true;
                 }
             }
