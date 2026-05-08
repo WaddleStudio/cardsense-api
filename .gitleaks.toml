@@ -1,0 +1,16 @@
+title = "CardSense API secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders, tracked agent-skill fixtures, and local Postman workspace metadata"
+regexes = [
+  '''<[^>\n]*(?:key|token|secret|password)[^>\n]*>''',
+]
+paths = [
+  '''\.claude/skills/gstack/browse/test/commands\.test\.ts$''',
+  '''\.claude/skills/gstack/supabase/config\.sh$''',
+  '''\.claude/skills/gstack/test/skill-e2e-cso\.test\.ts$''',
+  '''\.postman/resources\.yaml$''',
+]
