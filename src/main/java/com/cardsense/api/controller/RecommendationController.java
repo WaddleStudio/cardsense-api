@@ -19,11 +19,17 @@ public class RecommendationController {
     @PostMapping("/v1/recommendations/card")
     public ResponseEntity<RecommendationResponse> recommendCard(@Valid @RequestBody RecommendationRequest request) {
         long startTime = System.currentTimeMillis();
-        RecommendationResponse response = decisionEngine.recommend(request);
-        long latency = System.currentTimeMillis() - startTime;
+        try {
+            RecommendationResponse response = decisionEngine.recommend(request);
+            long latency = System.currentTimeMillis() - startTime;
 
-        auditService.logRecommendation(request, response, latency);
+            auditService.logRecommendation(request, response, latency);
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException exception) {
+            long latency = System.currentTimeMillis() - startTime;
+            auditService.logRecommendationError(null, request, exception, latency);
+            throw exception;
+        }
     }
 }
