@@ -13,6 +13,7 @@ ALTER TABLE IF EXISTS public.daily_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.extract_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.promotion_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.promotion_current ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.recommendation_audits ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.clients FROM anon, authenticated;
 REVOKE ALL ON TABLE public.api_calls FROM anon, authenticated;
@@ -20,6 +21,7 @@ REVOKE ALL ON TABLE public.daily_usage FROM anon, authenticated;
 REVOKE ALL ON TABLE public.extract_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.promotion_versions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.promotion_current FROM anon, authenticated;
+REVOKE ALL ON TABLE public.recommendation_audits FROM anon, authenticated;
 
 -- Prevent browser clients from invoking usage helpers through PostgREST RPC.
 -- The backend JDBC role can still call these functions as the owner/superuser.
@@ -44,6 +46,7 @@ WHERE schemaname = 'public'
       'daily_usage',
       'extract_runs',
       'promotion_versions',
-      'promotion_current'
+      'promotion_current',
+      'recommendation_audits'
   )
 ORDER BY tablename;
