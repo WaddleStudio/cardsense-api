@@ -1,5 +1,5 @@
 # ── Build stage ──
-FROM eclipse-temurin:21-jdk AS build
+FROM docker.io/library/eclipse-temurin:21-jdk AS build
 WORKDIR /build
 
 COPY pom.xml .
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y maven \
     && mv target/cardsense-api-*.jar target/app.jar
 
 # ── Runtime stage ──
-FROM eclipse-temurin:21-jre
+FROM docker.io/library/eclipse-temurin:21-jre
 WORKDIR /app
 
 COPY --from=build /build/target/app.jar app.jar
