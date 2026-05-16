@@ -60,6 +60,21 @@
     "validUntil": "2026-06-30"
   },
   {
+    "planId": "CATHAY_CUBE_FULL_PAY",
+    "bankCode": "CATHAY",
+    "cardCode": "CATHAY_CUBE",
+    "planName": "全支付",
+    "planDescription": "切換至全支付方案，並以全支付綁定 CUBE 信用卡於全支付國內合作通路消費。",
+    "switchFrequency": "DAILY",
+    "switchMaxPerMonth": null,
+    "requiresSubscription": false,
+    "subscriptionCost": null,
+    "exclusiveGroup": "CATHAY_CUBE_PLANS",
+    "status": "ACTIVE",
+    "validFrom": "2026-04-22",
+    "validUntil": "2026-12-31"
+  },
+  {
     "planId": "CATHAY_CUBE_BIRTHDAY",
     "bankCode": "CATHAY",
     "cardCode": "CATHAY_CUBE",

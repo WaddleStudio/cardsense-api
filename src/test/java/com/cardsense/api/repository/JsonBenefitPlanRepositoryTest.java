@@ -25,7 +25,7 @@ public class JsonBenefitPlanRepositoryTest {
     @Test
     public void testFindByCardCodeReturnsCubePlans() {
         List<BenefitPlan> plans = repository.findByCardCode("CATHAY_CUBE");
-        assertEquals(7, plans.size());
+        assertEquals(8, plans.size());
         assertTrue(plans.stream().allMatch(p -> "CATHAY_CUBE".equals(p.getCardCode())));
         assertTrue(plans.stream().allMatch(p -> "CATHAY_CUBE_PLANS".equals(p.getExclusiveGroup())));
     }
@@ -61,6 +61,14 @@ public class JsonBenefitPlanRepositoryTest {
     public void testFindByPlanIdReturnsNullForUnknown() {
         BenefitPlan plan = repository.findByPlanId("NONEXISTENT");
         assertNull(plan);
+    }
+
+    @Test
+    public void testFindByPlanIdReturnsCubeFullPayPlan() {
+        BenefitPlan plan = repository.findByPlanId("CATHAY_CUBE_FULL_PAY");
+        assertEquals("全支付", plan.getPlanName());
+        assertEquals(LocalDate.of(2026, 4, 22), plan.getValidFrom());
+        assertEquals(LocalDate.of(2026, 12, 31), plan.getValidUntil());
     }
 
     @Test
