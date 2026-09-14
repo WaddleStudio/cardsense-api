@@ -44,7 +44,7 @@ See [ARCHIVE_SHUTDOWN_CHECKLIST.md](ARCHIVE_SHUTDOWN_CHECKLIST.md) for service, 
 - Inspect actual OS/agent cron, Task Scheduler, k3s CronJobs/runtime, keep-alive monitors and external integrations. Repository evidence does not prove any are active or stopped.
 - Four root Actions workflows contain only event-driven secret scans; no refresh/deploy/scheduled sync workflow or application scheduler was found. Source protection remains enabled. Vendored tool workflows are not root Actions workflows.
 - Manual extractor `refresh_and_deploy.py` still defaults to live extraction and potential Supabase publishing. No repository scheduler calls it. Its code is retained; any outside callers must be stopped in their actual scheduler.
-- The Vercel configuration is local and unpublished, and cannot stop existing deployments or billing. Nothing was deployed, pushed, merged, remotely archived, or deleted by this task. No credentials or production data were accessed.
+- At initial local delivery the Vercel configuration was unpublished; publishing it still cannot stop existing deployments or billing. Nothing was deployed, pushed, merged, remotely archived, or deleted by this task. No credentials or production data were accessed.
 
 ## Product-direction search classification
 
@@ -261,6 +261,12 @@ Promotion datasets are no longer guaranteed current. The historical May 16 count
 
 > No feature work should resume unless the reopening criteria in ARCHIVED.md are met.
 
-## Delivery boundary
+## Initial local delivery boundary
 
 Changes are retained on local `chore/cardsense-commercial-closure` branches. Verified archive changes are committed separately by repository; pre-existing untracked work is excluded. Commit IDs and final worktree status are reported in the final handoff. No push, merge, PR creation, branch deletion, resource deletion, or production action is part of this delivery. External dashboard items remain pending owner action.
+
+## Publication follow-up — 2026-09-15
+
+After reviewing the local handoff, the owner authorized pushing the five task branches and creating cross-referenced PRs. The initial inventory, branch ancestry table, and test snapshot above remain historical evidence. Publication does not merge the PRs, stop external services, change secrets/data, or include pre-existing untracked work.
+
+Pre-push verification repeated: API 93 tests passed; extractor 170 tests passed with network blocked; Web build passed; Fleet 10 tests and renderer check passed. Existing Web lint debt and full-context external API tests remain disclosed as above. No runtime source changed.
