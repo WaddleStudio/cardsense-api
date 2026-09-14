@@ -1,3 +1,5 @@
+> **Historical / superseded / not planned (2026-09).** This design/checklist is retained for engineering reference. Unfinished work is no longer planned; existing implementations are retained. [Archive decision](https://github.com/WaddleStudio/cardsense-api/blob/master/ARCHIVED.md).
+
 # CardSense API — VIBE_SPEC
 ### Updated: 2026-04-01
 

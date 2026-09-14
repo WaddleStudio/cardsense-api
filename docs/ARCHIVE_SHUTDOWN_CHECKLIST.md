@@ -1,0 +1,34 @@
+# CardSense Archive Shutdown Checklist
+
+Decision: **Commercial No-Go / Technical Asset Retained (2026-09)**. Inspected 2026-09-14.
+
+This is an owner checklist, not a record of completed external shutdown. Only repositories and GitHub refs/open PRs/issues were inspected. Provider dashboards, production datasets, secrets, billing, OS schedulers, and k3s were not accessed. Service existence and current plans must be confirmed; historical documentation is not proof that a service still runs.
+
+## Repository changes and limits
+
+- `cardsense-web/vercel.json` sets `git.deploymentEnabled` to `false`. This is a local, unpublished change. It suppresses Git-triggered deployments for revisions containing it; it does not stop existing deployments, CLI/API deployments, deploy hooks, or charges. The owner can disconnect Git in the dashboard without publishing code. See [Vercel Git configuration](https://vercel.com/docs/project-configuration/git-configuration#turning-off-all-automatic-deployments).
+- The four CardSense repositories each have only `.github/workflows/secret-scan.yml` at the Actions workflow root. These are push/PR/manual checks, with no `schedule`, refresh, Supabase publish, or deploy steps. They remain enabled as event-driven source protection. No periodic promotion workflow was found to disable. Nested vendored `.claude/skills/gstack/.github/workflows` are tool examples, not these repos' executable workflow roots.
+- `cardsense-extractor/jobs/refresh_and_deploy.py` retains the manual real-bank extraction → SQLite import → Supabase sync → optional local deploy flow. A normal invocation can contact banks/Cloudflare and write data; `--no-supabase` alone still extracts live bank pages. No repository scheduler invoking it was found. Disable any external callers below.
+- `cardsense-api/railway.toml` is only a Docker build configuration. `Dockerfile` defaults to the prod profile. Neither stops a running service or controls dashboard auto-deploy. No Render service manifest or k3s runtime manifest was found in the four repos.
+- No secrets, production records, deployments, remote branches, or service resources were changed or deleted. No new product capability is included.
+
+## Manual actions
+
+Every row starts **unverified / pending owner inspection**. Potential cost is a category to check against actual billing, not an asserted current charge or price.
+
+| Done | Service | Current purpose / repository evidence | Suggested action | Potential recurring cost | Consequence of shutdown |
+|------|---------|---------------------------------------|------------------|--------------------------|-------------------------|
+| [ ] | Vercel | Historical Web hosting (`cardsense-web/README.md`, `vercel.json`); frontend includes Vercel Analytics | Confirm project and plan; disconnect Git auto-deploy; disable CardSense deploy hooks/cron if present; pause public serving and analytics where supported. Check previews and subscriptions separately. | Builds, traffic, functions/analytics, project/team plan if enabled; unknown | Live/preview UI may become unavailable. Git config alone leaves existing pages accessible with stale data. Source/build configuration remains. |
+| [ ] | Render | API README and fleet dashboard record `cardsense-api.onrender.com` | Confirm whether API still exists; disable auto-deploy and suspend the CardSense service plus keep-alive monitors if present; inspect plan/billing. | Compute/service plan if active; unknown | Web API calls stop. Audit writes caused by traffic stop only when traffic/runtime is stopped. Source/database records remain. |
+| [ ] | Railway | `cardsense-api/railway.toml` and historical workspace references | Confirm whether project is provisioned; stop/suspend only CardSense services and disable auto-deploy/triggers if supported. Verify whether retained volumes still cost money. | Compute, memory, volumes, subscription if provisioned; unknown | Alternative API runtime becomes unavailable; retaining build config does not retain running compute. |
+| [ ] | Supabase | API adapters/audit SQL, extractor sync, Web feedback upload, Fleet webhook guide | Confirm CardSense callers have stopped. Disable scheduled jobs, database webhooks and feedback Edge Function triggers if present. Review pausing and shared consumers before pausing; retain data/backups. | Database compute/storage, egress, backups, storage/functions if enabled; unknown | Recommendation data, feedback upload, audit persistence, and forwarding become unavailable. Inspect shared app dependencies first. |
+| [ ] | Cloudflare | TAISHIN/FUBON Browser Rendering in extractor | Stop extractor callers; check CardSense Workers, cron triggers, Browser Rendering usage/subscriptions. Disable CardSense-only jobs. Handle retired credentials only in the vendor console. | Browser rendering usage, associated Workers/plan if enabled; unknown | Live extraction relying on rendered pages stops. Stored snapshots/parsing code remain. |
+| [ ] | GitHub Actions / integrations | Only root secret-scan workflows found; no open PRs/issues in the four repos | Review workflow history, queued runs, deploy hooks, integrations, and external scheduled callers. Cancel unexpected publishing jobs if present. No schedule removal was necessary in inspected source. | Actions minutes or integration plans if used; unknown | Outside jobs stop; separately disabling secret scans would remove source protection. Nothing was changed remotely. |
+| [ ] | OS cron / Task Scheduler / OpenClaw / k3s | API history mentions k3s; `fleet-command/ref-agent-cron.md` contains suggested schedules, not installed jobs | Inspect real schedulers/manifests for bank refresh, `refresh_and_deploy.py`, sync, keep-alives, or deploy scripts. Pause matching jobs; suspend CardSense CronJobs/scale runtime after confirming ownership. | Host/cloud compute, external API/LLM/browser use if active; unknown | Refresh, agent status tasks, or self-hosted API stop. Other Fleet projects must remain unaffected. |
+| [ ] | Supabase → Discord feedback integration | `fleet-command/docs/Supabase-Discord-Webhook-Setup.md` | Confirm whether deployed; disable CardSense DB webhook/function trigger in Supabase. Do not send a test message. | Function/storage/egress usage if installed; unknown | New feedback forwarding stops; existing records remain. |
+
+## Completion evidence
+
+Record service, date, owner, observed pre-shutdown state, action, final enabled/paused state, and remaining billable items after performing each action. Do not mark shutdown complete solely because source is archived or Git auto-deploy is disabled. Do not paste credentials or production data into this checklist.
+
+Repository closure does not change GitHub's repository archive setting. No push, merge, remote branch deletion, resource deletion, or production data mutation was performed.
