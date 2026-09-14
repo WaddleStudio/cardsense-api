@@ -1,3 +1,8 @@
+> **Project status: Archived / Commercial No-Go (2026-09).**
+> Active product development and promotion-data maintenance have stopped.
+> The repositories are retained as engineering portfolio and reusable technical assets.
+> Promotion data is historical and is not guaranteed current. See [ARCHIVED.md](ARCHIVED.md) for rationale.
+
 # CardSense API
 
 以情境式卡片比較為核心的 deterministic recommendation API。在指定消費情境下比較各張卡的有效回饋，回傳可解釋的推薦結果。
@@ -106,7 +111,7 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 | sqlite | `cardsense.repository.mode=sqlite` | extractor 匯入的 `promotion_current` |
 | supabase | `cardsense.repository.mode=supabase` | Supabase PostgreSQL `promotion_current` |
 
-**部署**：Render；prod profile 連 Supabase PostgreSQL，local profile 保留 SQLite。
+**歷史部署**：文件記載 Render，另保留 Railway / Docker 設定；目前運行狀態未確認。prod profile 連 Supabase PostgreSQL，local profile 保留 SQLite。請參閱 [停用清單](docs/ARCHIVE_SHUTDOWN_CHECKLIST.md)。
 
 ## 與其他子專案的關係
 
@@ -119,10 +124,12 @@ CARDSENSE_DB_PATH=/path/to/cardsense.db mvn spring-boot:run
 2. 匯入 SQLite
 3. 啟動 API 驗證 recommendation / catalog 行為
 
-## 已知限制與未來規劃
+## 已知限制與歷史規劃
 
-- **My Wallet Mode**：將於近期引入，允許使用者傳入自己目前擁有的卡片庫 (`cardCodes`)，推薦引擎將提供「最優持有卡」與「申辦新卡利差估算」。
-- `POINTS` 與 `MILES` 的高階折現 / 價值正規化規則為準備實作之 P0 核心特色。
+**Historical roadmap — no longer planned.** 以下未完成項目不再排入開發；既有實作與限制保留供參考。
+
+- **My Wallet Mode**：既有 `cardCodes` 持卡篩選與 Web My Wallet 保留；原先的延伸規劃不再執行。
+- `POINTS` 與 `MILES` 的高階折現 / 價值正規化規則屬歷史 P0 規劃，不再實作。
 - SQLite repository 從 `raw_payload_json` 還原 `stackability` metadata，尚未拆成顯式欄位。
 - Break-even 目前只處理 `FIXED` vs `PERCENT` 交叉點比較。
-- Card-level `eligibilityType` 由所有 promotion 聚合得出（`BUSINESS > PROFESSION_SPECIFIC > GENERAL`），若 extractor 資料過時需重跑 pipeline。
+- Card-level `eligibilityType` 由所有 promotion 聚合得出（`BUSINESS > PROFESSION_SPECIFIC > GENERAL`），封存後不再透過 pipeline 更新，可能過時。

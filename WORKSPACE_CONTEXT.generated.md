@@ -46,5 +46,6 @@
 
 ## Workspace Notes
 
+- CardSense is Archived / Commercial No-Go / Technical Asset Retained (2026-09). Read cardsense-api/ARCHIVED.md; no feature work or promotion refresh unless reopening criteria are met.
 - Read generated repo context before scanning long status documents.
 - Use fleet-command as the control plane for cross-repo workflow and conventions.

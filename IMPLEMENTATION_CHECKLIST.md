@@ -1,8 +1,10 @@
+> **Historical / superseded / not planned (2026-09).** This design/checklist is retained for engineering reference. Unfinished work is no longer planned; existing implementations are retained. [Archive decision](https://github.com/WaddleStudio/cardsense-api/blob/master/ARCHIVED.md).
+
 # CardSense API Implementation Checklist
 
 Updated: 2026-04-08
 
-## Next
+## Historical roadmap — no longer planned
 
 ### High Priority
 - Implement high-end `MILES` value calculation and `POINTS` point-to-cash normalization per bank.
