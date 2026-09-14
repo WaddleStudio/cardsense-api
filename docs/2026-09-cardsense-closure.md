@@ -270,3 +270,13 @@ Changes are retained on local `chore/cardsense-commercial-closure` branches. Ver
 After reviewing the local handoff, the owner authorized pushing the five task branches and creating cross-referenced PRs. The initial inventory, branch ancestry table, and test snapshot above remain historical evidence. Publication does not merge the PRs, stop external services, change secrets/data, or include pre-existing untracked work.
 
 Pre-push verification repeated: API 93 tests passed; extractor 170 tests passed with network blocked; Web build passed; Fleet 10 tests and renderer check passed. Existing Web lint debt and full-context external API tests remain disclosed as above. No runtime source changed.
+
+Task branches pushed and PRs created on 2026-09-15:
+
+- [cardsense-api](https://github.com/WaddleStudio/cardsense-api/pull/9)
+- [cardsense-extractor](https://github.com/WaddleStudio/cardsense-extractor/pull/7)
+- [cardsense-web](https://github.com/WaddleStudio/cardsense-web/pull/16)
+- [cardsense-contracts](https://github.com/WaddleStudio/cardsense-contracts/pull/6)
+- [fleet-command](https://github.com/WaddleStudio/fleet-command/pull/14)
+
+PRs remain open for review. This publication record does not certify CI results or external shutdown.
