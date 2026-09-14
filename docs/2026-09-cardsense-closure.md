@@ -224,7 +224,7 @@ Checks used local fixtures, mocks and temporary databases. No bank extraction, l
 | Fleet | `uv run python scripts/render_workspace_assets.py --check` | PASS: generated workspace assets up to date. |
 | Fleet | `uv run python -m http.server 5177 --bind 127.0.0.1` from Fleet root; installed Google Chrome headless via Playwright `executable_path`, local traffic only | PASS: HTTP 200; title correct; loadError hidden; all 4 JSON files load; 5 repo cards, 4 archived CardSense cards, 3 historical roadmap columns, 2 shutdown actions, zero console/page errors. |
 
-Browser evidence: [Chrome report](https://github.com/WaddleStudio/fleet-command/blob/main/reviews/2026-09-cardsense-closure/chrome-smoke.json) and [screenshot](https://github.com/WaddleStudio/fleet-command/blob/main/reviews/2026-09-cardsense-closure/dashboard.png). Local equivalents are under `../fleet-command/reviews/2026-09-cardsense-closure/` relative to the API repository root. These remote links will resolve only after owner-authorized publication.
+Browser evidence: [Chrome report](https://github.com/WaddleStudio/fleet-command/blob/main/reviews/2026-09-cardsense-closure/chrome-smoke.json) and [screenshot](https://github.com/WaddleStudio/fleet-command/blob/main/reviews/2026-09-cardsense-closure/dashboard.png). Local equivalents are under `../fleet-command/reviews/2026-09-cardsense-closure/` relative to the API repository root. These default-branch links resolve after the respective archive PRs merge; use task-branch links in the PR descriptions before merge.
 
 ### Verification exclusions and environment limits
 
